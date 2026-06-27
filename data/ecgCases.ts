@@ -1,4 +1,10 @@
-import type { ECGParameters } from "@/lib/ecg/types";
+export type ECGCaseTemplateId =
+  | "nsr-lead2-v0"
+  | "vt-lead2-v0"
+  | "afib-lead2-v0"
+  | "vf-lead2-v0";
+
+export type ECGCaseRhythm = "regular" | "irregular" | "chaotic";
 
 export interface ECGCase {
   /** 症例ID */
@@ -11,8 +17,12 @@ export interface ECGCase {
   severity: "normal" | "warning" | "critical";
   /** 解説文 */
   description: string;
-  /** この症例に対応する心電図パラメータ */
-  params: ECGParameters;
+  /** 新しいテンプレートエンジンに渡す波形テンプレートID */
+  templateId: ECGCaseTemplateId;
+  /** 症例選択時の初期心拍数 */
+  initialBpm: number;
+  /** RR間隔の扱い */
+  rhythm?: ECGCaseRhythm;
 }
 
 export const ECG_CASES: ECGCase[] = [
@@ -23,25 +33,20 @@ export const ECG_CASES: ECGCase[] = [
     severity: "normal",
     description:
       "すべての基準が正常なお手本となる波形です。規則正しいP波に続いて狭いQRS波が認められ、STは等電位線上にあります。洞結節からの正常な興奮伝導を示しています。",
-    params: {
-      global: {
-        heartRate: 70,
-        rhythmRegularity: 1,
-      },
-      pWave: {
-        amplitude: 0.5,
-        width: 0.4,
-        morphology: 0,
-      },
-      qrsComplex: {
-        width: 0.22, // 狭い（正常）
-        morphology: 0,
-      },
-      stT_Segment: {
-        stElevation: 0, // ST正常
-        tWaveAmplitude: 0.55,
-      },
-    },
+    templateId: "nsr-lead2-v0",
+    initialBpm: 60,
+    rhythm: "regular",
+  },
+  {
+    id: "af",
+    label: "心房細動",
+    abbr: "AF",
+    severity: "warning",
+    description:
+      "P波が消失し、基線に細かな震え（f波）が認められます。QRS波は比較的狭い一方で、RR間隔が不規則に変動する絶対性不整脈を示します。",
+    templateId: "afib-lead2-v0",
+    initialBpm: 110,
+    rhythm: "irregular",
   },
   {
     id: "vt",
@@ -50,52 +55,20 @@ export const ECG_CASES: ECGCase[] = [
     severity: "critical",
     description:
       "心室由来の幅の広いQRS波が連続する致死性不整脈。直ちに血行動態の評価と除細動の準備が必要です。P波は確認できず、QRS幅は著明に延長しています。",
-    params: {
-      global: {
-        heartRate: 160,
-        rhythmRegularity: 0.92,
-      },
-      pWave: {
-        amplitude: 0.05, // P波ほぼ消失
-        width: 0.4,
-        morphology: 0,
-      },
-      qrsComplex: {
-        width: 0.85, // QRSワイド
-        morphology: 1,
-      },
-      stT_Segment: {
-        stElevation: 0, // ST正常
-        tWaveAmplitude: 0.3,
-      },
-    },
+    templateId: "vt-lead2-v0",
+    initialBpm: 160,
+    rhythm: "regular",
   },
   {
-    id: "stemi",
-    label: "急性心筋梗塞",
-    abbr: "STEMI",
+    id: "vf",
+    label: "心室細動",
+    abbr: "VF",
     severity: "critical",
     description:
-      "心筋の壊死が始まっている緊急事態。著明なST上昇が特徴です。冠動脈の完全閉塞を示しており、直ちにPCI（経皮的冠動脈インターベンション）による再灌流療法が必要です。",
-    params: {
-      global: {
-        heartRate: 80,
-        rhythmRegularity: 1,
-      },
-      pWave: {
-        amplitude: 0.5,
-        width: 0.4,
-        morphology: 0,
-      },
-      qrsComplex: {
-        width: 0.25, // QRS正常
-        morphology: 0,
-      },
-      stT_Segment: {
-        stElevation: 0.72, // ST著明上昇
-        tWaveAmplitude: 0.8,
-      },
-    },
+      "心室の電気活動が完全に破綻し、心室が痙攣している状態です。QRS波は消失し、規則性のない大小の波形が連続します。直ちに除細動が必要な致死性不整脈です。",
+    templateId: "vf-lead2-v0",
+    initialBpm: 0,
+    rhythm: "chaotic",
   },
 ];
 

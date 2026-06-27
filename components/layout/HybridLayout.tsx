@@ -1,15 +1,34 @@
 import { Monitor, SlidersHorizontal } from "lucide-react";
+import type { RefObject } from "react";
 
-import { ECGSimulator } from "@/components/ECGSimulator";
-import { Separator } from "@/components/ui/separator";
-import type { ECGParameters } from "@/lib/ecg/types";
+import { EcgCanvas, type EcgCanvasHandle } from "@/components/EcgCanvas";
+import type { ECGCaseRhythm } from "@/data/ecgCases";
+import type { BeatTemplate } from "@/src/data/ecg/templates";
 
 interface HybridLayoutProps {
-  params: ECGParameters;
+  canvasRef?: RefObject<EcgCanvasHandle | null>;
+  bpm: number;
+  rhythm: ECGCaseRhythm;
+  template: BeatTemplate;
+  displayBpm?: number;
+  displayTemplate?: BeatTemplate;
+  onShockComplete?: () => void;
   dashboard: React.ReactNode;
 }
 
-export function HybridLayout({ params, dashboard }: HybridLayoutProps) {
+export function HybridLayout({
+  canvasRef,
+  bpm,
+  rhythm,
+  template,
+  displayBpm,
+  displayTemplate,
+  onShockComplete,
+  dashboard,
+}: HybridLayoutProps) {
+  const monitorTemplate = displayTemplate ?? template;
+  const monitorBpm = displayBpm ?? bpm;
+
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       {/* 上部: ECGモニター領域 (高さ40vhに固定、縮小しない) */}
@@ -21,18 +40,27 @@ export function HybridLayout({ params, dashboard }: HybridLayoutProps) {
           <div className="flex items-center gap-2 text-emerald-400">
             <Monitor className="size-4" aria-hidden />
             <span className="text-xs font-medium tracking-wide uppercase md:text-sm">
-              Lead II — モニター
+              {monitorTemplate.label}
             </span>
           </div>
           <div className="flex items-center gap-3 font-mono text-xs text-emerald-300/80">
-            <span>HR {Math.round(params.global.heartRate)} bpm</span>
+            <span>
+              {monitorBpm > 0 ? `HR ${Math.round(monitorBpm)} bpm` : "HR --"}
+            </span>
             <span className="hidden sm:inline">25 mm/s</span>
             <span className="hidden sm:inline">10 mm/mV</span>
           </div>
         </div>
 
         <div className="relative min-h-0 flex-1 overflow-hidden">
-          <ECGSimulator params={params} className="absolute inset-0" />
+          <EcgCanvas
+            ref={canvasRef}
+            bpm={bpm}
+            rhythm={rhythm}
+            template={template}
+            onShockComplete={onShockComplete}
+            className="absolute inset-0"
+          />
         </div>
       </section>
 

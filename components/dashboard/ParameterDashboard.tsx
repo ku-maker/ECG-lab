@@ -1,22 +1,20 @@
 "use client";
 
-import {
-  Activity,
-  ArrowDown,
-  ArrowUp,
-  Minus,
-  MoveHorizontal,
-} from "lucide-react";
+import { Activity, RotateCcw, Zap } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import type { ECGParameters } from "@/lib/ecg/types";
+import type { ECGCase } from "@/data/ecgCases";
 import { cn } from "@/lib/utils";
 
 interface ParameterDashboardProps {
-  params: ECGParameters;
-  onHeartRateChange: (value: number) => void;
-  onQrsWidthChange: (value: number) => void;
-  onStLevelChange: (value: number) => void;
+  bpm: number;
+  selectedCase: ECGCase | null;
+  onBpmChange: (value: number) => void;
+  onShock?: () => void;
+  isShockInProgress?: boolean;
+  isShockComplete?: boolean;
+  onReset?: () => void;
 }
 
 function sliderValue(values: number | readonly number[]): number {
@@ -44,192 +42,147 @@ function ParamCard({
 }
 
 export function ParameterDashboard({
-  params,
-  onHeartRateChange,
-  onQrsWidthChange,
-  onStLevelChange,
+  bpm,
+  selectedCase,
+  onBpmChange,
+  onShock,
+  isShockInProgress = false,
+  isShockComplete = false,
+  onReset,
 }: ParameterDashboardProps) {
-  const stLevel = params.stT_Segment.stElevation;
-  const stLabel =
-    stLevel > 0.08 ? "上昇" : stLevel < -0.08 ? "低下" : "正常";
-  const qrsLabel =
-    params.qrsComplex.width < 0.33
-      ? "狭い"
-      : params.qrsComplex.width > 0.66
-        ? "広い"
-        : "中等度";
+  const bpmDisabled = selectedCase?.rhythm === "chaotic";
+  const shockAvailable =
+    selectedCase?.templateId === "vt-lead2-v0" ||
+    selectedCase?.templateId === "vf-lead2-v0";
+  const shockEnabled =
+    !isShockInProgress &&
+    !isShockComplete &&
+    shockAvailable;
+  const rhythmLabel = bpmDisabled
+    ? "BPMなし"
+    : bpm < 60
+      ? "徐脈域"
+      : bpm > 100
+        ? "頻脈域"
+        : "正常域";
 
   return (
     <div className="grid gap-4 md:grid-cols-3">
-      {/* 心拍数 */}
-      <ParamCard>
-        <div className="flex items-start justify-between">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-rose-500/10 text-rose-500">
+      <ParamCard className="md:col-span-2">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-rose-500/10 text-rose-500">
             <Activity className="size-5" aria-hidden />
           </div>
           <span className="font-mono text-3xl font-semibold tabular-nums tracking-tight">
-            {Math.round(params.global.heartRate)}
+            {bpmDisabled ? "--" : Math.round(bpm)}
             <span className="ml-1 text-sm font-normal text-muted-foreground">
               bpm
             </span>
           </span>
         </div>
 
+        <div className="flex items-center justify-between gap-3">
+          <div className="font-mono text-sm text-muted-foreground">
+            {selectedCase ? `${selectedCase.label} / Lead II` : "Lead II"}
+          </div>
+          <span className="shrink-0 rounded-full bg-rose-500/10 px-2.5 py-0.5 text-xs font-medium text-rose-600 dark:text-rose-400">
+            {rhythmLabel}
+          </span>
+        </div>
+
         <Slider
-          min={30}
-          max={200}
+          min={40}
+          max={180}
           step={1}
-          value={[params.global.heartRate]}
-          onValueChange={(v) => onHeartRateChange(sliderValue(v))}
+          value={[bpmDisabled ? 40 : bpm]}
+          onValueChange={(value) => onBpmChange(sliderValue(value))}
+          disabled={bpmDisabled}
           aria-label="心拍数"
         />
 
         <div className="flex justify-between text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
             <span className="size-1.5 rounded-full bg-rose-300" />
-            徐脈
+            40 bpm
           </span>
           <span className="flex items-center gap-1">
-            頻脈
+            180 bpm
             <span className="size-1.5 rounded-full bg-rose-500" />
           </span>
         </div>
       </ParamCard>
 
-      {/* QRS幅 */}
-      <ParamCard>
-        <div className="flex items-start justify-between">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-violet-500/10 text-violet-500">
-            <MoveHorizontal className="size-5" aria-hidden />
+      <ParamCard
+        className={cn(
+          "border-border",
+          shockAvailable && "border-destructive/30 bg-destructive/5",
+          shockEnabled && "shadow-[0_0_0_1px_rgb(239_68_68_/_0.16)]"
+        )}
+      >
+        <div className="flex items-center gap-3">
+          <div
+            className={cn(
+              "flex size-10 shrink-0 items-center justify-center rounded-xl",
+              shockAvailable
+                ? "bg-destructive text-destructive-foreground"
+                : "bg-muted text-muted-foreground"
+            )}
+          >
+            <Zap className="size-5 fill-current" aria-hidden />
           </div>
-          <span className="rounded-full bg-violet-500/10 px-2.5 py-0.5 text-xs font-medium text-violet-600 dark:text-violet-400">
-            {qrsLabel}
-          </span>
-        </div>
-
-        <div className="flex items-end justify-center gap-3 py-1" aria-hidden>
-          <svg viewBox="0 0 24 40" className="h-10 w-6 text-muted-foreground/50">
-            <path
-              d="M12 36 L12 28 L8 28 L8 12 L12 4 L16 12 L16 28 L12 28"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinejoin="round"
-            />
-          </svg>
-          <svg
-            viewBox="0 0 40 40"
-            className={cn(
-              "h-10 w-10 text-violet-500 transition-all duration-200",
-              params.qrsComplex.width > 0.5 && "scale-110"
-            )}
-          >
-            <path
-              d="M20 36 L20 30 L10 30 L10 14 L20 4 L30 14 L30 30 L20 30"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinejoin="round"
-            />
-          </svg>
-          <svg viewBox="0 0 32 40" className="h-10 w-8 text-muted-foreground/50">
-            <path
-              d="M16 36 L16 28 L4 28 L4 10 L16 2 L28 10 L28 28 L16 28"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </div>
-
-        <Slider
-          min={0}
-          max={1}
-          step={0.01}
-          value={[params.qrsComplex.width]}
-          onValueChange={(v) => onQrsWidthChange(sliderValue(v))}
-          aria-label="QRS幅"
-        />
-
-        <div className="flex justify-between text-xs text-muted-foreground">
-          <span>狭い</span>
-          <span>広い</span>
-        </div>
-      </ParamCard>
-
-      {/* STレベル */}
-      <ParamCard>
-        <div className="flex items-start justify-between">
-          <div
-            className={cn(
-              "flex size-10 items-center justify-center rounded-xl",
-              stLevel > 0.08
-                ? "bg-amber-500/10 text-amber-500"
-                : stLevel < -0.08
-                  ? "bg-sky-500/10 text-sky-500"
-                  : "bg-emerald-500/10 text-emerald-500"
-            )}
-          >
-            {stLevel > 0.08 ? (
-              <ArrowUp className="size-5" aria-hidden />
-            ) : stLevel < -0.08 ? (
-              <ArrowDown className="size-5" aria-hidden />
-            ) : (
-              <Minus className="size-5" aria-hidden />
-            )}
+          <div className="min-w-0">
+            <div
+              className={cn(
+                "text-sm font-semibold",
+                shockAvailable ? "text-destructive" : "text-foreground"
+              )}
+            >
+              除細動
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {shockAvailable
+                ? "VT / VFのみ除細動可能"
+                : "現在の症例を初期化"}
+            </div>
           </div>
-          <span
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-2">
+          {shockAvailable ? (
+            <Button
+              type="button"
+              size="lg"
+              disabled={!shockEnabled}
+              onClick={onShock}
+              className="h-12 w-full bg-red-600 text-base font-black tracking-wide text-white shadow-lg shadow-red-500/20 hover:bg-red-700 disabled:shadow-none"
+            >
+              <Zap className="size-5 fill-current" aria-hidden />
+              {isShockInProgress
+                ? "SHOCK中"
+                : isShockComplete
+                  ? "SHOCK済み"
+                  : "SHOCK"}
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            size="lg"
+            variant="outline"
+            onClick={onReset}
             className={cn(
-              "rounded-full px-2.5 py-0.5 text-xs font-medium",
-              stLevel > 0.08
-                ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                : stLevel < -0.08
-                  ? "bg-sky-500/10 text-sky-600 dark:text-sky-400"
-                  : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+              "h-12 w-full text-sm font-semibold",
+              !shockAvailable && "sm:col-span-2"
             )}
           >
-            {stLabel}
-          </span>
+            <RotateCcw className="size-4" aria-hidden />
+            症例リセット
+          </Button>
         </div>
 
-        <div className="relative flex h-10 items-center justify-center" aria-hidden>
-          <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-border" />
-          <div
-            className="absolute left-1/2 size-2.5 -translate-x-1/2 rounded-full bg-emerald-500"
-            style={{ top: "50%" }}
-          />
-          <div
-            className={cn(
-              "absolute left-1/2 size-3 -translate-x-1/2 rounded-full border-2 border-background bg-primary shadow-sm transition-all duration-150",
-              stLevel > 0 && "bg-amber-500",
-              stLevel < 0 && "bg-sky-500"
-            )}
-            style={{
-              top: `${50 - stLevel * 28}%`,
-            }}
-          />
-        </div>
-
-        <Slider
-          min={-1}
-          max={1}
-          step={0.01}
-          value={[stLevel]}
-          onValueChange={(v) => onStLevelChange(sliderValue(v))}
-          aria-label="STレベル"
-        />
-
-        <div className="flex justify-between text-xs text-muted-foreground">
-          <span className="flex items-center gap-1 text-sky-600/80 dark:text-sky-400/80">
-            <ArrowDown className="size-3" />
-            低下
-          </span>
-          <span>正常</span>
-          <span className="flex items-center gap-1 text-amber-600/80 dark:text-amber-400/80">
-            上昇
-            <ArrowUp className="size-3" />
-          </span>
+        <div className="text-xs leading-relaxed text-muted-foreground">
+          {shockAvailable
+            ? "通電後、電気的飽和とフラットラインを地続きに流し、正常洞調律へ復帰します。"
+            : "現在の疾患プリセットの初期BPMで、波形をクリアして描き直します。"}
         </div>
       </ParamCard>
     </div>
