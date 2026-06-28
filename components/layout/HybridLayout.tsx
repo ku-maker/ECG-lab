@@ -1,7 +1,9 @@
-import { Monitor, SlidersHorizontal } from "lucide-react";
+import { Monitor, SlidersHorizontal, Volume2, VolumeX } from "lucide-react";
 import type { RefObject } from "react";
 
 import { EcgCanvas, type EcgCanvasHandle } from "@/components/EcgCanvas";
+import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import type { ECGCaseRhythm } from "@/data/ecgCases";
 import type { BeatTemplate } from "@/src/data/ecg/templates";
 
@@ -13,7 +15,17 @@ interface HybridLayoutProps {
   displayBpm?: number;
   displayTemplate?: BeatTemplate;
   onShockComplete?: () => void;
+  onLiveBpmChange?: (bpm: number | null) => void;
+  audioMuted?: boolean;
+  audioVolume?: number;
+  onAudioMutedChange?: (muted: boolean) => void;
+  onAudioVolumeChange?: (volume: number) => void;
   dashboard: React.ReactNode;
+}
+
+function sliderValue(values: number | readonly number[]): number {
+  if (typeof values === "number") return values;
+  return values[0] ?? 0;
 }
 
 export function HybridLayout({
@@ -24,6 +36,11 @@ export function HybridLayout({
   displayBpm,
   displayTemplate,
   onShockComplete,
+  onLiveBpmChange,
+  audioMuted = true,
+  audioVolume = 0.45,
+  onAudioMutedChange,
+  onAudioVolumeChange,
   dashboard,
 }: HybridLayoutProps) {
   const monitorTemplate = displayTemplate ?? template;
@@ -44,6 +61,34 @@ export function HybridLayout({
             </span>
           </div>
           <div className="flex items-center gap-3 font-mono text-xs text-emerald-300/80">
+            <div className="flex items-center gap-2 text-emerald-300">
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                aria-label={audioMuted ? "音声をオン" : "ミュート"}
+                title={audioMuted ? "音声をオン" : "ミュート"}
+                onClick={() => onAudioMutedChange?.(!audioMuted)}
+                className="size-8 text-emerald-300 hover:bg-emerald-400/10 hover:text-emerald-200"
+              >
+                {audioMuted ? (
+                  <VolumeX className="size-4" aria-hidden />
+                ) : (
+                  <Volume2 className="size-4" aria-hidden />
+                )}
+              </Button>
+              <Slider
+                min={0}
+                max={100}
+                step={1}
+                value={[Math.round(audioVolume * 100)]}
+                onValueChange={(value) =>
+                  onAudioVolumeChange?.(sliderValue(value) / 100)
+                }
+                aria-label="音量"
+                className="w-20 sm:w-24"
+              />
+            </div>
             <span>
               {monitorBpm > 0 ? `HR ${Math.round(monitorBpm)} bpm` : "HR --"}
             </span>
@@ -59,6 +104,9 @@ export function HybridLayout({
             rhythm={rhythm}
             template={template}
             onShockComplete={onShockComplete}
+            onLiveBpmChange={onLiveBpmChange}
+            audioMuted={audioMuted}
+            audioVolume={audioVolume}
             className="absolute inset-0"
           />
         </div>

@@ -22,6 +22,9 @@ export function ECGWorkspace() {
   const shockOriginCaseRef = useRef<ECGCase | null>(null);
   const [isShockInProgress, setIsShockInProgress] = useState(false);
   const [isShockComplete, setIsShockComplete] = useState(false);
+  const [liveBpm, setLiveBpm] = useState<number | null>(null);
+  const [audioMuted, setAudioMuted] = useState(true);
+  const [audioVolume, setAudioVolume] = useState(0.45);
   const selectedTemplate = findTemplateOptionByTemplateId(
     activeCase.templateId
   );
@@ -29,7 +32,8 @@ export function ECGWorkspace() {
   const monitorTemplate = isShockComplete
     ? recoveryTemplate.template
     : selectedTemplate.template;
-  const monitorBpm = isShockComplete ? 70 : bpm;
+  const isAfCase = activeCase.templateId.includes("af");
+  const monitorBpm = isShockComplete ? 70 : isAfCase ? liveBpm ?? bpm : bpm;
 
   useEffect(() => {
     activeCaseRef.current = activeCase;
@@ -42,9 +46,29 @@ export function ECGWorkspace() {
     shockOriginCaseRef.current = null;
     setIsShockInProgress(false);
     setIsShockComplete(false);
+    setLiveBpm(null);
     setSelectedCase(ecgCase);
     setBpm(ecgCase.initialBpm);
     ecgCanvasRef.current?.resetTimeline();
+  };
+
+  const handleBpmChange = (nextBpm: number) => {
+    setLiveBpm(null);
+    setBpm(nextBpm);
+  };
+
+  const handleAudioMutedChange = (muted: boolean) => {
+    setAudioMuted(muted);
+    if (!muted) {
+      ecgCanvasRef.current?.resumeAudio();
+    }
+  };
+
+  const handleAudioVolumeChange = (volume: number) => {
+    setAudioVolume(volume);
+    if (volume > 0 && !audioMuted) {
+      ecgCanvasRef.current?.resumeAudio();
+    }
   };
 
   const handleShock = () => {
@@ -53,6 +77,7 @@ export function ECGWorkspace() {
     shockOriginCaseRef.current = currentCase;
     setIsShockInProgress(true);
     setIsShockComplete(false);
+    setLiveBpm(null);
     ecgCanvasRef.current?.triggerShock();
   };
 
@@ -66,6 +91,7 @@ export function ECGWorkspace() {
     shockOriginCaseRef.current = null;
     setIsShockInProgress(false);
     setIsShockComplete(false);
+    setLiveBpm(null);
     setSelectedCase(currentCase);
     setBpm(currentCase.initialBpm);
     ecgCanvasRef.current?.resetTimeline();
@@ -81,7 +107,7 @@ export function ECGWorkspace() {
       <ParameterDashboard
         bpm={bpm}
         selectedCase={activeCase}
-        onBpmChange={setBpm}
+        onBpmChange={handleBpmChange}
         onShock={handleShock}
         isShockInProgress={isShockInProgress}
         isShockComplete={isShockComplete}
@@ -99,6 +125,11 @@ export function ECGWorkspace() {
       displayBpm={monitorBpm}
       displayTemplate={monitorTemplate}
       onShockComplete={handleShockComplete}
+      onLiveBpmChange={setLiveBpm}
+      audioMuted={audioMuted}
+      audioVolume={audioVolume}
+      onAudioMutedChange={handleAudioMutedChange}
+      onAudioVolumeChange={handleAudioVolumeChange}
       dashboard={controlPanel}
     />
   );

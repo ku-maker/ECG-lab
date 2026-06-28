@@ -19,21 +19,29 @@ const WAVEFORM_SAMPLE_STEP_PX = 0.25;
 const MAX_FRAME_DELTA_MS = 50;
 const WAVEFORM_VERTICAL_PADDING_PX = 18;
 const VF_DISPLAY_RANGE_MV = { min: -2, max: 2 };
-const AF_MIN_BEAT_BPM = 60;
-const AF_MAX_BEAT_BPM = 160;
-const AF_AVERAGE_BEAT_MS =
-  60_000 / ((AF_MIN_BEAT_BPM + AF_MAX_BEAT_BPM) / 2);
+const AF_BPM_VARIATION = 0.3;
+const AF_QRS_PEAK_OFFSET_MS = 24;
+const AF_DISPLAY_RANGE_MV = { min: -0.35, max: 1.15 };
+const ECG_BEEP_FREQUENCY_HZ = 500;
+const ECG_BEEP_DURATION_SEC = 0.05;
+const VF_ALARM_INTERVAL_MS = 850;
+const VF_ALARM_FREQUENCY_HZ = 180;
 const SHOCK_ARTIFACT_MS = 200;
 const SHOCK_FLATLINE_END_MS = 1500;
 const SHOCK_FLASH_MS = 160;
-const afForwardBeatStartsMs = [0];
-const afBackwardBeatStartsMs = [0];
+const afTimingCaches = new Map<
+  number,
+  { forwardBeatStartsMs: number[]; backwardBeatStartsMs: number[] }
+>();
 
 type EcgCanvasProps = {
   template?: BeatTemplate;
   bpm?: number;
   rhythm?: ECGCaseRhythm;
   onShockComplete?: () => void;
+  onLiveBpmChange?: (bpm: number | null) => void;
+  audioMuted?: boolean;
+  audioVolume?: number;
   width?: number;
   height?: number;
   secondsVisible?: number;
@@ -42,6 +50,7 @@ type EcgCanvasProps = {
 };
 
 export type EcgCanvasHandle = {
+  resumeAudio: () => void;
   triggerShock: () => void;
   resetTimeline: () => void;
 };
@@ -121,6 +130,36 @@ function getVfChaosValueAtTimeMs(timeMs: number): number {
 
   // Coarse VFとして見える振幅にスケールする
   return (wave1 + wave2 * 0.8 + wave3 * 0.5) * 0.6;
+}
+
+function gaussian(x: number, center: number, width: number): number {
+  const z = (x - center) / width;
+  return Math.exp(-0.5 * z * z);
+}
+
+function getAfBaselineValueAtTimeMs(timeMs: number): number {
+  const t = timeMs / 1000;
+
+  return (
+    Math.sin(t * Math.PI * 2 * 6.3 + Math.sin(t * 0.7)) * 0.04 +
+    Math.sin(t * Math.PI * 2 * 8.8 + Math.cos(t * 0.4)) * 0.025 +
+    Math.sin(t * Math.PI * 2 * 11.2 + 1.6) * 0.015
+  );
+}
+
+function getAfQrsValueAtTimeMs(
+  timeMs: number,
+  bpm: number,
+  beatIndex: number
+): number {
+  const qrsStartMs = getAfBeatStartMs(bpm, beatIndex);
+  const dt = timeMs - qrsStartMs;
+
+  return (
+    gaussian(dt, 0, 8) * -0.16 +
+    gaussian(dt, 24, 12) * 1.02 +
+    gaussian(dt, 58, 18) * -0.24
+  );
 }
 
 function getShockArtifactValueAtTimeMs(timeMs: number): number {
@@ -220,53 +259,76 @@ function findIrregularBeatIndex(timeMs: number, baseBeatMs: number): number {
   );
 }
 
-function getAfBeatBpm(beatIndex: number): number {
-  return (
-    AF_MIN_BEAT_BPM +
-    seededUnitNoise(beatIndex * 3.917 + 17.31) *
-      (AF_MAX_BEAT_BPM - AF_MIN_BEAT_BPM)
-  );
+function getAfBaseBpm(bpm: number): number {
+  return Math.max(1, Math.round(bpm));
 }
 
-function getAfBeatDurationMs(beatIndex: number): number {
-  return 60_000 / getAfBeatBpm(beatIndex);
+function getAfBeatBpm(bpm: number, beatIndex: number): number {
+  const baseBpm = getAfBaseBpm(bpm);
+  const minBpm = baseBpm * (1 - AF_BPM_VARIATION);
+  const maxBpm = baseBpm * (1 + AF_BPM_VARIATION);
+
+  return minBpm + seededUnitNoise(beatIndex * 3.917 + 17.31) * (maxBpm - minBpm);
 }
 
-function getAfBeatStartMs(beatIndex: number): number {
+function getAfBeatDurationMs(bpm: number, beatIndex: number): number {
+  return 60_000 / getAfBeatBpm(bpm, beatIndex);
+}
+
+function getAfTimingCache(bpm: number): {
+  forwardBeatStartsMs: number[];
+  backwardBeatStartsMs: number[];
+} {
+  const baseBpm = getAfBaseBpm(bpm);
+  let cache = afTimingCaches.get(baseBpm);
+
+  if (!cache) {
+    cache = { forwardBeatStartsMs: [0], backwardBeatStartsMs: [0] };
+    afTimingCaches.set(baseBpm, cache);
+  }
+
+  return cache;
+}
+
+function getAfBeatStartMs(bpm: number, beatIndex: number): number {
+  const cache = getAfTimingCache(bpm);
+
   if (beatIndex >= 0) {
-    for (let i = afForwardBeatStartsMs.length; i <= beatIndex; i++) {
-      afForwardBeatStartsMs[i] =
-        afForwardBeatStartsMs[i - 1] + getAfBeatDurationMs(i - 1);
+    for (let i = cache.forwardBeatStartsMs.length; i <= beatIndex; i++) {
+      cache.forwardBeatStartsMs[i] =
+        cache.forwardBeatStartsMs[i - 1] + getAfBeatDurationMs(bpm, i - 1);
     }
-    return afForwardBeatStartsMs[beatIndex];
+    return cache.forwardBeatStartsMs[beatIndex];
   }
 
   const cacheIndex = -beatIndex;
-  for (let i = afBackwardBeatStartsMs.length; i <= cacheIndex; i++) {
-    afBackwardBeatStartsMs[i] =
-      afBackwardBeatStartsMs[i - 1] - getAfBeatDurationMs(-i);
+  for (let i = cache.backwardBeatStartsMs.length; i <= cacheIndex; i++) {
+    cache.backwardBeatStartsMs[i] =
+      cache.backwardBeatStartsMs[i - 1] - getAfBeatDurationMs(bpm, -i);
   }
 
-  return afBackwardBeatStartsMs[cacheIndex];
+  return cache.backwardBeatStartsMs[cacheIndex];
 }
 
-function findAfBeatIndex(timeMs: number): number {
+function findAfBeatIndex(timeMs: number, bpm: number): number {
+  const baseBpm = getAfBaseBpm(bpm);
+
   return findVariableBeatIndex(
     timeMs,
-    AF_AVERAGE_BEAT_MS,
-    getAfBeatDurationMs,
-    getAfBeatStartMs
+    60_000 / baseBpm,
+    (index) => getAfBeatDurationMs(baseBpm, index),
+    (index) => getAfBeatStartMs(baseBpm, index)
   );
 }
 
-function getAfEcgValueAtTimeMs(template: BeatTemplate, timeMs: number) {
-  const beatIndex = findAfBeatIndex(timeMs);
-  const beatStartMs = getAfBeatStartMs(beatIndex);
-  const beatDurationMs = getAfBeatDurationMs(beatIndex);
-  const phaseMs = timeMs - beatStartMs;
-  const templateMs = (phaseMs / beatDurationMs) * template.durationMs;
+function getAfEcgValueAtTimeMs(timeMs: number, bpm: number) {
+  const beatIndex = findAfBeatIndex(timeMs, bpm);
+  const qrs =
+    getAfQrsValueAtTimeMs(timeMs, bpm, beatIndex - 1) +
+    getAfQrsValueAtTimeMs(timeMs, bpm, beatIndex) +
+    getAfQrsValueAtTimeMs(timeMs, bpm, beatIndex + 1);
 
-  return getTemplateValueAtMs(template, templateMs);
+  return getAfBaselineValueAtTimeMs(timeMs) + qrs;
 }
 
 function getIrregularEcgValueAtTimeMs(
@@ -295,7 +357,7 @@ function getRhythmValueAtTimeMs(
   }
 
   if (isAfTemplate(template)) {
-    return getAfEcgValueAtTimeMs(template, timeMs);
+    return getAfEcgValueAtTimeMs(timeMs, bpm);
   }
 
   if (rhythm === "irregular" && bpm > 0) {
@@ -349,6 +411,62 @@ function getFiducialFractionsInBeat(template: BeatTemplate): number[] {
     .map((templateMs) => templateMs / template.durationMs);
 }
 
+function forEachQrsPeakInRange(
+  template: BeatTemplate,
+  fromMs: number,
+  toMs: number,
+  bpm: number,
+  rhythm: ECGCaseRhythm,
+  callback: (timeMs: number) => void
+) {
+  if (toMs <= fromMs || isVfTemplate(template)) return;
+
+  if (isAfTemplate(template)) {
+    const firstBeatIndex = findAfBeatIndex(fromMs, bpm) - 1;
+    const lastBeatIndex = findAfBeatIndex(toMs, bpm) + 1;
+
+    for (let beatIndex = firstBeatIndex; beatIndex <= lastBeatIndex; beatIndex++) {
+      const peakTimeMs =
+        getAfBeatStartMs(bpm, beatIndex) + AF_QRS_PEAK_OFFSET_MS;
+      if (peakTimeMs > fromMs && peakTimeMs <= toMs) {
+        callback(peakTimeMs);
+      }
+    }
+    return;
+  }
+
+  const beatMs = bpm > 0 ? 60_000 / bpm : template.durationMs;
+  const qrsPeakTemplateMs =
+    template.fiducialsMs.r ?? template.fiducialsMs.qrsOn ?? 0;
+
+  if (rhythm === "irregular" && bpm > 0) {
+    const firstBeatIndex = findIrregularBeatIndex(fromMs, beatMs) - 1;
+    const lastBeatIndex = findIrregularBeatIndex(toMs, beatMs) + 1;
+
+    for (let beatIndex = firstBeatIndex; beatIndex <= lastBeatIndex; beatIndex++) {
+      const beatStartMs = getIrregularBeatStartMs(beatMs, beatIndex);
+      const beatDurationMs = getIrregularBeatDurationMs(beatMs, beatIndex);
+      const peakTimeMs =
+        beatStartMs + (qrsPeakTemplateMs / template.durationMs) * beatDurationMs;
+      if (peakTimeMs > fromMs && peakTimeMs <= toMs) {
+        callback(peakTimeMs);
+      }
+    }
+    return;
+  }
+
+  const qrsPeakOffsetMs = (qrsPeakTemplateMs / template.durationMs) * beatMs;
+  const firstBeatIndex = Math.floor((fromMs - qrsPeakOffsetMs) / beatMs) - 1;
+  const lastBeatIndex = Math.floor((toMs - qrsPeakOffsetMs) / beatMs) + 1;
+
+  for (let beatIndex = firstBeatIndex; beatIndex <= lastBeatIndex; beatIndex++) {
+    const peakTimeMs = beatIndex * beatMs + qrsPeakOffsetMs;
+    if (peakTimeMs > fromMs && peakTimeMs <= toMs) {
+      callback(peakTimeMs);
+    }
+  }
+}
+
 function buildWaveformSampleXs(
   width: number,
   visibleMs: number,
@@ -370,24 +488,24 @@ function buildWaveformSampleXs(
   const hasAfTiming = isAfTemplate(template);
   const hasIrregularTiming = !hasAfTiming && rhythm === "irregular";
   const firstBeatIndex = hasAfTiming
-    ? findAfBeatIndex(visibleStartMs) - 1
+    ? findAfBeatIndex(visibleStartMs, bpm) - 1
     : hasIrregularTiming
       ? findIrregularBeatIndex(visibleStartMs, beatMs) - 1
       : Math.floor(visibleStartMs / beatMs) - 1;
   const lastBeatIndex = hasAfTiming
-    ? findAfBeatIndex(elapsedMs) + 1
+    ? findAfBeatIndex(elapsedMs, bpm) + 1
     : hasIrregularTiming
       ? findIrregularBeatIndex(elapsedMs, beatMs) + 1
       : Math.floor(elapsedMs / beatMs) + 1;
 
   for (let beatIndex = firstBeatIndex; beatIndex <= lastBeatIndex; beatIndex++) {
     const beatStartMs = hasAfTiming
-      ? getAfBeatStartMs(beatIndex)
+      ? getAfBeatStartMs(bpm, beatIndex)
       : hasIrregularTiming
         ? getIrregularBeatStartMs(beatMs, beatIndex)
         : beatIndex * beatMs;
     const beatDurationMs = hasAfTiming
-      ? getAfBeatDurationMs(beatIndex)
+      ? getAfBeatDurationMs(bpm, beatIndex)
       : hasIrregularTiming
         ? getIrregularBeatDurationMs(beatMs, beatIndex)
         : beatMs;
@@ -409,6 +527,10 @@ function buildWaveformSampleXs(
 function getTemplateRange(template: BeatTemplate): { min: number; max: number } {
   if (isVfTemplate(template)) {
     return VF_DISPLAY_RANGE_MV;
+  }
+
+  if (isAfTemplate(template)) {
+    return AF_DISPLAY_RANGE_MV;
   }
 
   let min = 0;
@@ -448,10 +570,10 @@ function getWaveformLayout(
 ): { baselineY: number; pxPerMv: number } {
   const { min, max } = getTimelineRange(template, shockEvent);
   const availableHeight = Math.max(1, height - WAVEFORM_VERTICAL_PADDING_PX * 2);
-  const amplitudeRange = Math.max(0.1, max - min);
-  const fittedPxPerMv = availableHeight / amplitudeRange;
+  const maxAbsAmplitude = Math.max(0.1, Math.abs(min), Math.abs(max));
+  const fittedPxPerMv = availableHeight / (maxAbsAmplitude * 2);
   const nextPxPerMv = Math.min(preferredPxPerMv, fittedPxPerMv);
-  const baselineY = WAVEFORM_VERTICAL_PADDING_PX + max * nextPxPerMv;
+  const baselineY = height / 2;
 
   return { baselineY, pxPerMv: nextPxPerMv };
 }
@@ -511,6 +633,9 @@ function EcgCanvas(
     bpm = 60,
     rhythm = "regular",
     onShockComplete,
+    onLiveBpmChange,
+    audioMuted = true,
+    audioVolume = 0.45,
     width,
     height,
     secondsVisible = 6,
@@ -527,6 +652,15 @@ function EcgCanvas(
   const shockEventRef = useRef<ShockEvent | null>(null);
   const latestSignalRef = useRef({ bpm, rhythm, template });
   const onShockCompleteRef = useRef(onShockComplete);
+  const onLiveBpmChangeRef = useRef(onLiveBpmChange);
+  const lastReportedLiveBpmRef = useRef<number | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const masterGainRef = useRef<GainNode | null>(null);
+  const flatlineOscillatorRef = useRef<OscillatorNode | null>(null);
+  const flatlineGainRef = useRef<GainNode | null>(null);
+  const lastAudioScanMsRef = useRef(0);
+  const lastVfAlarmMsRef = useRef(-Infinity);
+  const audioSettingsRef = useRef({ muted: audioMuted, volume: audioVolume });
   const [isShockFlashVisible, setIsShockFlashVisible] = useState(false);
 
   latestSignalRef.current = { bpm, rhythm, template };
@@ -535,9 +669,251 @@ function EcgCanvas(
     onShockCompleteRef.current = onShockComplete;
   }, [onShockComplete]);
 
+  useEffect(() => {
+    onLiveBpmChangeRef.current = onLiveBpmChange;
+  }, [onLiveBpmChange]);
+
+  useEffect(() => {
+    audioSettingsRef.current = { muted: audioMuted, volume: audioVolume };
+    const masterGain = masterGainRef.current;
+
+    if (masterGain) {
+      const context = audioContextRef.current;
+      const nextGain = audioMuted ? 0 : audioVolume;
+      if (context) {
+        masterGain.gain.setTargetAtTime(nextGain, context.currentTime, 0.015);
+      } else {
+        masterGain.gain.value = nextGain;
+      }
+    }
+
+    if (audioMuted || audioVolume <= 0) {
+      const context = audioContextRef.current;
+      const oscillator = flatlineOscillatorRef.current;
+      const gain = flatlineGainRef.current;
+
+      if (context && oscillator && gain) {
+        gain.gain.setTargetAtTime(0.0001, context.currentTime, 0.015);
+        oscillator.stop(context.currentTime + 0.08);
+      }
+
+      flatlineOscillatorRef.current = null;
+      flatlineGainRef.current = null;
+    }
+  }, [audioMuted, audioVolume]);
+
+  useEffect(() => {
+    return () => {
+      flatlineOscillatorRef.current?.stop();
+      audioContextRef.current?.close();
+    };
+  }, []);
+
+  function shouldPlayAudio() {
+    const { muted, volume } = audioSettingsRef.current;
+    return !muted && volume > 0;
+  }
+
+  function ensureAudioContext() {
+    if (typeof window === "undefined") return null;
+
+    if (!audioContextRef.current) {
+      const context = new AudioContext();
+      const masterGain = context.createGain();
+      masterGain.gain.value = audioSettingsRef.current.muted
+        ? 0
+        : audioSettingsRef.current.volume;
+      masterGain.connect(context.destination);
+      audioContextRef.current = context;
+      masterGainRef.current = masterGain;
+    }
+
+    const context = audioContextRef.current;
+    if (context.state === "suspended") {
+      void context.resume();
+    }
+
+    return context;
+  }
+
+  function playTone(
+    frequencyHz: number,
+    durationSec: number,
+    peakGain: number,
+    type: OscillatorType = "sine"
+  ) {
+    if (!shouldPlayAudio()) return;
+
+    const context = ensureAudioContext();
+    const masterGain = masterGainRef.current;
+    if (!context || !masterGain) return;
+
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    const now = context.currentTime;
+
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(frequencyHz, now);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(peakGain, now + 0.006);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + durationSec);
+
+    oscillator.connect(gain);
+    gain.connect(masterGain);
+    oscillator.start(now);
+    oscillator.stop(now + durationSec + 0.02);
+  }
+
+  function playQrsBeep() {
+    playTone(ECG_BEEP_FREQUENCY_HZ, ECG_BEEP_DURATION_SEC, 0.08);
+  }
+
+  function playVfAlarmPulse() {
+    playTone(VF_ALARM_FREQUENCY_HZ, 0.14, 0.055, "triangle");
+  }
+
+  function playShockSound() {
+    if (!shouldPlayAudio()) return;
+
+    const context = ensureAudioContext();
+    const masterGain = masterGainRef.current;
+    if (!context || !masterGain) return;
+
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    const now = context.currentTime;
+
+    oscillator.type = "sawtooth";
+    oscillator.frequency.setValueAtTime(180, now);
+    oscillator.frequency.exponentialRampToValueAtTime(48, now + 0.18);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.16, now + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+
+    oscillator.connect(gain);
+    gain.connect(masterGain);
+    oscillator.start(now);
+    oscillator.stop(now + 0.22);
+  }
+
+  function startFlatlineTone() {
+    if (!shouldPlayAudio() || flatlineOscillatorRef.current) return;
+
+    const context = ensureAudioContext();
+    const masterGain = masterGainRef.current;
+    if (!context || !masterGain) return;
+
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    const now = context.currentTime;
+
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(880, now);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.setTargetAtTime(0.035, now, 0.025);
+
+    oscillator.connect(gain);
+    gain.connect(masterGain);
+    oscillator.start(now);
+
+    flatlineOscillatorRef.current = oscillator;
+    flatlineGainRef.current = gain;
+  }
+
+  function stopFlatlineTone() {
+    const oscillator = flatlineOscillatorRef.current;
+    const gain = flatlineGainRef.current;
+    const context = audioContextRef.current;
+    if (!oscillator || !gain || !context) return;
+
+    gain.gain.setTargetAtTime(0.0001, context.currentTime, 0.02);
+    oscillator.stop(context.currentTime + 0.08);
+    flatlineOscillatorRef.current = null;
+    flatlineGainRef.current = null;
+  }
+
+  function triggerVfAlarmIfDue(elapsedMs: number) {
+    if (elapsedMs - lastVfAlarmMsRef.current < VF_ALARM_INTERVAL_MS) return;
+    lastVfAlarmMsRef.current = elapsedMs;
+    playVfAlarmPulse();
+  }
+
+  function syncAudio(
+    previousElapsedMs: number,
+    elapsedMs: number,
+    shockEvent: ShockEvent | null,
+    activeTemplate: BeatTemplate,
+    activeBpm: number,
+    activeRhythm: ECGCaseRhythm
+  ) {
+    if (!shouldPlayAudio()) {
+      stopFlatlineTone();
+      return;
+    }
+
+    if (!shockEvent) {
+      stopFlatlineTone();
+
+      if (isVfTemplate(activeTemplate)) {
+        triggerVfAlarmIfDue(elapsedMs);
+        return;
+      }
+
+      forEachQrsPeakInRange(
+        activeTemplate,
+        previousElapsedMs,
+        elapsedMs,
+        activeBpm,
+        activeRhythm,
+        playQrsBeep
+      );
+      return;
+    }
+
+    const previousSinceShock = previousElapsedMs - shockEvent.startMs;
+    const currentSinceShock = elapsedMs - shockEvent.startMs;
+
+    if (
+      currentSinceShock >= SHOCK_ARTIFACT_MS &&
+      previousSinceShock < SHOCK_FLATLINE_END_MS
+    ) {
+      startFlatlineTone();
+    } else {
+      stopFlatlineTone();
+    }
+
+    if (currentSinceShock < SHOCK_ARTIFACT_MS) {
+      return;
+    }
+
+    if (currentSinceShock < SHOCK_FLATLINE_END_MS) {
+      return;
+    }
+
+    stopFlatlineTone();
+
+    const recoveryFromMs = Math.max(
+      0,
+      previousSinceShock - SHOCK_FLATLINE_END_MS
+    );
+    const recoveryToMs = currentSinceShock - SHOCK_FLATLINE_END_MS;
+
+    forEachQrsPeakInRange(
+      shockEvent.recoveryTemplate,
+      recoveryFromMs,
+      recoveryToMs,
+      shockEvent.recoveryBpm,
+      shockEvent.recoveryRhythm,
+      playQrsBeep
+    );
+  }
+
   useImperativeHandle(
     ref,
     () => ({
+      resumeAudio() {
+        void ensureAudioContext()?.resume();
+      },
       triggerShock() {
         const currentSignal = latestSignalRef.current;
         shockEventRef.current = {
@@ -550,16 +926,21 @@ function EcgCanvas(
           recoveryBpm: 70,
           recoveryRhythm: "regular",
         };
+        playShockSound();
         setIsShockFlashVisible(true);
         window.setTimeout(() => setIsShockFlashVisible(false), SHOCK_FLASH_MS);
       },
       resetTimeline() {
         shockEventRef.current = null;
         elapsedMsRef.current = 0;
+        lastAudioScanMsRef.current = 0;
         lastFrameTimeRef.current = null;
+        stopFlatlineTone();
         setIsShockFlashVisible(false);
       },
     }),
+    // Audio/animation helpers read mutable refs, so the imperative API stays stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
 
@@ -616,6 +997,12 @@ function EcgCanvas(
         isRecoveredFromShock ? shockEvent.recoveryBpm : bpm;
       const currentDisplayRhythm =
         isRecoveredFromShock ? shockEvent.recoveryRhythm : rhythm;
+      const liveAfBpm = isAfTemplate(currentDisplayTemplate)
+        ? getAfBeatBpm(
+            currentDisplayBpm,
+            findAfBeatIndex(elapsedMs, currentDisplayBpm)
+          )
+        : null;
       const waveformLayout = getWaveformLayout(
         template,
         shockEvent,
@@ -631,6 +1018,23 @@ function EcgCanvas(
         shockEvent.completed = true;
         onShockCompleteRef.current?.();
       }
+
+      const roundedLiveBpm =
+        liveAfBpm === null ? null : Math.round(liveAfBpm);
+      if (lastReportedLiveBpmRef.current !== roundedLiveBpm) {
+        lastReportedLiveBpmRef.current = roundedLiveBpm;
+        onLiveBpmChangeRef.current?.(roundedLiveBpm);
+      }
+
+      syncAudio(
+        lastAudioScanMsRef.current,
+        elapsedMs,
+        shockEvent,
+        template,
+        bpm,
+        rhythm
+      );
+      lastAudioScanMsRef.current = elapsedMs;
 
       drawGrid(ctx, renderWidth, renderHeight);
 
@@ -685,7 +1089,9 @@ function EcgCanvas(
       ctx.fillStyle = "#111111";
       ctx.font = "14px sans-serif";
       ctx.fillText(
-        `${currentDisplayTemplate.label} | ${currentDisplayBpm} bpm`,
+        `${currentDisplayTemplate.label} | ${
+          roundedLiveBpm ?? currentDisplayBpm
+        } bpm`,
         16,
         24
       );
@@ -702,6 +1108,8 @@ function EcgCanvas(
       }
       observer.disconnect();
     };
+    // The RAF loop is restarted only when rendering inputs change; audio state flows through refs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bpm, rhythm, width, height, secondsVisible, pxPerMv, template]);
 
   return (
