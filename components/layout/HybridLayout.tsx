@@ -14,6 +14,7 @@ interface HybridLayoutProps {
   template: BeatTemplate;
   displayBpm?: number;
   displayTemplate?: BeatTemplate;
+  displayLabel?: string;
   onShockComplete?: () => void;
   onLiveBpmChange?: (bpm: number | null) => void;
   audioMuted?: boolean;
@@ -35,6 +36,7 @@ export function HybridLayout({
   template,
   displayBpm,
   displayTemplate,
+  displayLabel,
   onShockComplete,
   onLiveBpmChange,
   audioMuted = true,
@@ -44,6 +46,7 @@ export function HybridLayout({
   dashboard,
 }: HybridLayoutProps) {
   const monitorTemplate = displayTemplate ?? template;
+  const monitorLabel = displayLabel ?? monitorTemplate.label;
   const monitorBpm = displayBpm ?? bpm;
 
   return (
@@ -57,7 +60,7 @@ export function HybridLayout({
           <div className="flex items-center gap-2 text-emerald-400">
             <Monitor className="size-4" aria-hidden />
             <span className="text-xs font-medium tracking-wide uppercase md:text-sm">
-              {monitorTemplate.label}
+              {monitorLabel}
             </span>
           </div>
           <div className="flex items-center gap-3 font-mono text-xs text-emerald-300/80">
@@ -103,6 +106,7 @@ export function HybridLayout({
             bpm={bpm}
             rhythm={rhythm}
             template={template}
+            displayLabel={displayLabel}
             onShockComplete={onShockComplete}
             onLiveBpmChange={onLiveBpmChange}
             audioMuted={audioMuted}

@@ -1,23 +1,188 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
+import type { AppMode } from "@/components/appMode";
 import { CaseExplanationCard } from "@/components/CaseExplanationCard";
 import { CaseSelector } from "@/components/CaseSelector";
 import type { EcgCanvasHandle } from "@/components/EcgCanvas";
 import { ParameterDashboard } from "@/components/dashboard/ParameterDashboard";
 import { HybridLayout } from "@/components/layout/HybridLayout";
+import { Button } from "@/components/ui/button";
 import { ECG_CASES, findCaseById, type ECGCase } from "@/data/ecgCases";
+import { cn } from "@/lib/utils";
 import {
   findTemplateOptionByTemplateId,
 } from "@/src/data/ecg/templates";
 
-export function ECGWorkspace() {
+function getLockedBpmForTemplateId(templateId: string): number | null {
+  if (templateId === "svt-lead2-v0") return 180;
+  if (templateId === "tdp-lead2-v0") return 200;
+  if (templateId === "afl-lead2-v0") return 75;
+  if (templateId === "avblock3-lead2-v0") return 35;
+  return null;
+}
+
+type ECGWorkspaceProps = {
+  appMode: AppMode;
+  quizSessionId: number;
+};
+
+type QuizQuestion = {
+  correctCase: ECGCase;
+  choices: ECGCase[];
+};
+
+function createSeededRandom(seed: number): () => number {
+  let state = seed % 2_147_483_647;
+  if (state <= 0) state += 2_147_483_646;
+
+  return () => {
+    state = (state * 16_807) % 2_147_483_647;
+    return (state - 1) / 2_147_483_646;
+  };
+}
+
+function createQuizSeed(): number {
+  return Math.floor(Math.random() * 1_000_000_000);
+}
+
+function shuffleItems<T>(items: T[], random = Math.random): T[] {
+  const shuffled = [...items];
+
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  return shuffled;
+}
+
+function createQuizQuestion(seed: number): QuizQuestion {
+  const random = createSeededRandom(seed + 1);
+  const candidates = ECG_CASES;
+  const correctCase =
+    candidates[Math.floor(random() * candidates.length)] ?? ECG_CASES[0];
+  const distractors = shuffleItems(
+    ECG_CASES.filter((ecgCase) => ecgCase.id !== correctCase.id),
+    random
+  ).slice(0, 3);
+
+  return {
+    correctCase,
+    choices: shuffleItems([correctCase, ...distractors], random),
+  };
+}
+
+function QuizPanel({
+  question,
+  selectedCaseId,
+  onAnswer,
+  onNextQuestion,
+}: {
+  question: QuizQuestion | null;
+  selectedCaseId: string | null;
+  onAnswer: (caseId: string) => void;
+  onNextQuestion: () => void;
+}) {
+  const hasAnswered = selectedCaseId !== null;
+  const isCorrect = selectedCaseId === question?.correctCase.id;
+
+  return (
+    <div className="flex flex-col gap-4 pb-12">
+      <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Quiz
+            </div>
+            <h2 className="mt-1 text-lg font-semibold">この波形は？</h2>
+          </div>
+          <div className="rounded-full bg-emerald-500/10 px-3 py-1 font-mono text-xs font-medium text-emerald-600 dark:text-emerald-400">
+            4択
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-3 md:grid-cols-2">
+          {question?.choices.map((choice) => {
+            const isSelected = selectedCaseId === choice.id;
+            const isCorrectChoice = choice.id === question.correctCase.id;
+
+            return (
+              <Button
+                key={choice.id}
+                type="button"
+                variant="outline"
+                size="lg"
+                disabled={hasAnswered}
+                onClick={() => onAnswer(choice.id)}
+                className={cn(
+                  "h-auto min-h-14 justify-start whitespace-normal px-4 py-3 text-left",
+                  hasAnswered &&
+                    isCorrectChoice &&
+                    "border-emerald-500 bg-emerald-500/10 text-emerald-700 disabled:opacity-100 dark:text-emerald-300",
+                  hasAnswered &&
+                    isSelected &&
+                    !isCorrectChoice &&
+                    "border-destructive bg-destructive/10 text-destructive disabled:opacity-100"
+                )}
+              >
+                <span className="flex min-w-0 flex-col items-start">
+                  <span className="font-semibold">{choice.label}</span>
+                  <span className="font-mono text-xs opacity-70">
+                    {choice.abbr}
+                  </span>
+                </span>
+              </Button>
+            );
+          })}
+        </div>
+
+        {hasAnswered ? (
+          <div className="mt-5 flex flex-col gap-3 rounded-xl border border-border bg-muted/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div
+              className={cn(
+                "text-sm font-semibold",
+                isCorrect ? "text-emerald-600" : "text-destructive"
+              )}
+            >
+              {isCorrect
+                ? "正解"
+                : `不正解 / 正解: ${question?.correctCase.label} (${question?.correctCase.abbr})`}
+            </div>
+            <Button type="button" onClick={onNextQuestion}>
+              次の問題へ
+            </Button>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+export function ECGWorkspace({ appMode, quizSessionId }: ECGWorkspaceProps) {
   const defaultCase = ECG_CASES[0];
   const ecgCanvasRef = useRef<EcgCanvasHandle | null>(null);
   const [selectedCase, setSelectedCase] = useState<ECGCase | null>(null);
+  const [quizQuestionSeed, setQuizQuestionSeed] = useState(createQuizSeed);
+  const [quizAnswer, setQuizAnswer] = useState<{
+    caseId: string;
+    nonce: number;
+  } | null>(
+    null
+  );
   const [bpm, setBpm] = useState(defaultCase.initialBpm);
-  const activeCase = selectedCase ?? defaultCase;
+  const quizNonce = quizSessionId + quizQuestionSeed;
+  const quizQuestion = useMemo(
+    () => createQuizQuestion(quizNonce),
+    [quizNonce]
+  );
+  const quizSelectedCaseId =
+    quizAnswer?.nonce === quizNonce ? quizAnswer.caseId : null;
+  const activeCase =
+    appMode === "quiz"
+      ? quizQuestion.correctCase
+      : selectedCase ?? defaultCase;
   const activeCaseRef = useRef(activeCase);
   const shockOriginCaseRef = useRef<ECGCase | null>(null);
   const [isShockInProgress, setIsShockInProgress] = useState(false);
@@ -29,15 +194,28 @@ export function ECGWorkspace() {
     activeCase.templateId
   );
   const recoveryTemplate = findTemplateOptionByTemplateId("nsr-lead2-v0");
-  const monitorTemplate = isShockComplete
+  const isLearningShockComplete = appMode === "learning" && isShockComplete;
+  const monitorTemplate = isLearningShockComplete
     ? recoveryTemplate.template
     : selectedTemplate.template;
-  const isAfCase = activeCase.templateId.includes("af");
-  const monitorBpm = isShockComplete ? 70 : isAfCase ? liveBpm ?? bpm : bpm;
+  const isAfCase = activeCase.templateId.includes("afib");
+  const lockedBpm = getLockedBpmForTemplateId(activeCase.templateId);
+  const baseBpm = appMode === "quiz" ? activeCase.initialBpm : bpm;
+  const effectiveBpm = lockedBpm ?? baseBpm;
+  const monitorBpm = isLearningShockComplete
+    ? 70
+    : isAfCase
+      ? liveBpm ?? baseBpm
+      : effectiveBpm;
 
   useEffect(() => {
     activeCaseRef.current = activeCase;
   }, [activeCase]);
+
+  useEffect(() => {
+    if (appMode !== "quiz") return;
+    ecgCanvasRef.current?.resetTimeline();
+  }, [appMode, quizNonce]);
 
   const handleCaseChange = (caseId: string) => {
     const ecgCase = findCaseById(caseId);
@@ -97,7 +275,25 @@ export function ECGWorkspace() {
     ecgCanvasRef.current?.resetTimeline();
   };
 
-  const controlPanel = (
+  const handleQuizAnswer = (caseId: string) => {
+    if (quizSelectedCaseId) return;
+    setQuizAnswer({ caseId, nonce: quizNonce });
+  };
+
+  const handleNextQuizQuestion = () => {
+    setQuizQuestionSeed((currentSeed) => {
+      let nextSeed = createQuizSeed();
+      while (nextSeed === currentSeed) {
+        nextSeed = createQuizSeed();
+      }
+      return nextSeed;
+    });
+    setLiveBpm(null);
+    setIsShockInProgress(false);
+    setIsShockComplete(false);
+  };
+
+  const learningControlPanel = (
     <div className="flex flex-col gap-6 md:gap-8 pb-12">
       <CaseSelector
         selectedCaseId={selectedCase?.id ?? null}
@@ -115,15 +311,26 @@ export function ECGWorkspace() {
       />
     </div>
   );
+  const quizControlPanel = (
+    <QuizPanel
+      question={quizQuestion}
+      selectedCaseId={quizSelectedCaseId}
+      onAnswer={handleQuizAnswer}
+      onNextQuestion={handleNextQuizQuestion}
+    />
+  );
+  const controlPanel =
+    appMode === "quiz" ? quizControlPanel : learningControlPanel;
 
   return (
     <HybridLayout
       canvasRef={ecgCanvasRef}
-      bpm={bpm}
+      bpm={effectiveBpm}
       rhythm={activeCase.rhythm ?? "regular"}
       template={selectedTemplate.template}
       displayBpm={monitorBpm}
       displayTemplate={monitorTemplate}
+      displayLabel={appMode === "quiz" ? "Question ? / 問題" : undefined}
       onShockComplete={handleShockComplete}
       onLiveBpmChange={setLiveBpm}
       audioMuted={audioMuted}

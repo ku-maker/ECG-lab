@@ -41,6 +41,14 @@ function ParamCard({
   );
 }
 
+function getLockedBpmForTemplateId(templateId: string | undefined): number | null {
+  if (templateId === "svt-lead2-v0") return 180;
+  if (templateId === "tdp-lead2-v0") return 200;
+  if (templateId === "afl-lead2-v0") return 75;
+  if (templateId === "avblock3-lead2-v0") return 35;
+  return null;
+}
+
 export function ParameterDashboard({
   bpm,
   selectedCase,
@@ -50,7 +58,10 @@ export function ParameterDashboard({
   isShockComplete = false,
   onReset,
 }: ParameterDashboardProps) {
-  const bpmDisabled = selectedCase?.rhythm === "chaotic";
+  const bpmUnavailable = selectedCase?.rhythm === "chaotic";
+  const lockedBpm = getLockedBpmForTemplateId(selectedCase?.templateId);
+  const bpmLocked = lockedBpm !== null;
+  const bpmDisabled = bpmUnavailable || bpmLocked;
   const shockAvailable =
     selectedCase?.templateId === "vt-lead2-v0" ||
     selectedCase?.templateId === "vf-lead2-v0";
@@ -58,8 +69,10 @@ export function ParameterDashboard({
     !isShockInProgress &&
     !isShockComplete &&
     shockAvailable;
-  const rhythmLabel = bpmDisabled
+  const rhythmLabel = bpmUnavailable
     ? "BPMなし"
+    : bpmLocked
+      ? `${lockedBpm}固定`
     : bpm < 60
       ? "徐脈域"
       : bpm > 100
@@ -74,7 +87,7 @@ export function ParameterDashboard({
             <Activity className="size-5" aria-hidden />
           </div>
           <span className="font-mono text-3xl font-semibold tabular-nums tracking-tight">
-            {bpmDisabled ? "--" : Math.round(bpm)}
+            {bpmUnavailable ? "--" : Math.round(lockedBpm ?? bpm)}
             <span className="ml-1 text-sm font-normal text-muted-foreground">
               bpm
             </span>
@@ -94,7 +107,7 @@ export function ParameterDashboard({
           min={40}
           max={180}
           step={1}
-          value={[bpmDisabled ? 40 : bpm]}
+          value={[bpmUnavailable ? 40 : Math.min(lockedBpm ?? bpm, 180)]}
           onValueChange={(value) => onBpmChange(sliderValue(value))}
           disabled={bpmDisabled}
           aria-label="心拍数"
