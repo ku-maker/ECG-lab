@@ -198,6 +198,10 @@ function QuizPanel({
                 </ul>
               </section>
             </div>
+
+            <p className="mt-4 border-t border-border pt-3 text-xs leading-relaxed text-muted-foreground">
+              この解説は心電図学習用であり、実際の診断や治療判断の代替ではありません。
+            </p>
           </div>
         ) : null}
       </div>

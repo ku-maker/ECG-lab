@@ -29,6 +29,13 @@ const educationalArrayFields = [
   "recognitionTips",
   "commonPitfalls",
 ];
+const clinicalSafetyPhrases = [
+  "教育用",
+  "学習用",
+  "代替ではありません",
+  "臨床判断支援ではありません",
+  "概念表示",
+];
 const errors = [];
 
 function relative(filePath) {
@@ -363,6 +370,11 @@ async function validateCases(templateIds) {
 
     if (!clinicalNote || clinicalNote.trim() === "") {
       addError(casesFile, `${id ?? label}.clinicalNote must be a non-empty string`);
+    } else if (!clinicalSafetyPhrases.some((phrase) => clinicalNote.includes(phrase))) {
+      addError(
+        casesFile,
+        `${id ?? label}.clinicalNote should include educational/non-substitution safety wording`,
+      );
     }
   });
 
