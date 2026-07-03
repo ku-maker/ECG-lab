@@ -9,6 +9,8 @@ The current target is **ECG Lab v1.0: a Lead II-centered ECG simulator**. The
 Conduction mode is a supporting concept map, not a complete
 vectorcardiography or 12-lead ECG engine.
 
+Current release target: **v1.0.0 MVP**.
+
 ## What You Can Do
 
 - View smooth scrolling Lead II-style ECG waveforms on a monitor-style canvas.
