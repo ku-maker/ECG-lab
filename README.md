@@ -109,6 +109,7 @@ http://localhost:3000
 Run checks:
 
 ```bash
+npm run validate:ecg
 npm run lint
 npm run build
 ```
