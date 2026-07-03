@@ -19,6 +19,34 @@ vectorcardiography or 12-lead ECG engine.
 - Practice rhythm recognition in Quiz mode with randomized multiple-choice questions.
 - Explore a simplified Conduction Map synchronized to the NSR Lead II waveform.
 
+## Screenshots / Demo
+
+ECG Lab は、Lead IIを中心とした学習用心電図シミュレーターです。
+
+現在は以下の3つのモードを実装しています。
+
+- **Learning**：症例プリセットを選択し、リアルタイム波形・BPM・解説を確認できます。
+- **Quiz**：波形を見てリズムを判定する4択クイズで練習できます。
+- **Conduction**：正常洞調律のLead II波形と刺激伝導の流れを同期表示する概念マップです。
+
+> Conduction Map は刺激伝導の理解を補助するための概念図です。
+> 厳密な3D心臓電気ベクトル、Vectorcardiography、12誘導心電図を再現するものではありません。
+
+### Learning Mode
+
+Learning Mode は ECG Lab のメイン画面です。
+NSR、AF、PVC、SVT、STEMI、VT、VF などの代表的な波形を切り替えながら、モニター風のリアルタイム心電図として観察できます。
+
+### Quiz Mode
+
+Quiz Mode では、波形名を隠した状態でリズム判読の練習ができます。
+心電図初学者が、代表的な波形の見た目を反復して覚えるためのモードです。
+
+### Conduction Map
+
+Conduction Map では、正常洞調律のLead II波形と、SA node、AV node、His bundle、bundle branches などの刺激伝導イメージを同期して表示します。
+P波、QRS、ST segment、T波といった波形ランドマークと電気的イベントの対応を直感的に理解するための補助教材です。
+
 ## Implemented Cases
 
 - Normal Sinus Rhythm (NSR)
