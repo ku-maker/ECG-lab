@@ -1,36 +1,110 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ECG Lab
 
-## Getting Started
+ECG Lab is an educational Lead II ECG waveform simulator built with Next.js.
+It is designed for students and clinicians who want to review common rhythms,
+practice recognition, and understand the rough relationship between a Lead II
+waveform and the cardiac conduction sequence.
 
-First, run the development server:
+The current target is **ECG Lab v1.0: a Lead II-centered ECG simulator**. The
+Conduction mode is a supporting concept map, not a complete
+vectorcardiography or 12-lead ECG engine.
+
+## What You Can Do
+
+- View smooth scrolling Lead II-style ECG waveforms on a monitor-style canvas.
+- Switch between rhythm presets and read short educational explanations.
+- Adjust heart rate where the rhythm supports it.
+- Hear synchronized ECG beeps with mute and volume controls.
+- Trigger defibrillation-style shock behavior for VT/VF learning scenarios.
+- Practice rhythm recognition in Quiz mode with randomized multiple-choice questions.
+- Explore a simplified Conduction Map synchronized to the NSR Lead II waveform.
+
+## Implemented Cases
+
+- Normal Sinus Rhythm (NSR)
+- Atrial Fibrillation (AF)
+- Premature Ventricular Contraction (PVC)
+- Premature Atrial Contraction (PAC)
+- Second-degree AV Block, Mobitz II
+- Supraventricular Tachycardia (SVT)
+- ST-elevation Myocardial Infarction (STEMI)
+- Torsades de Pointes (TdP)
+- Atrial Flutter (AFL)
+- Third-degree AV Block / Complete AV Block
+- Ventricular Tachycardia (VT)
+- Ventricular Fibrillation (VF)
+
+## Modes
+
+### Learning
+
+Learning mode is the main simulator. It shows the selected rhythm waveform,
+monitor heart rate, controls, audio settings, and an explanation card for the
+selected case.
+
+### Quiz
+
+Quiz mode hides the case name and asks the user to identify the rhythm from the
+waveform. Four answer choices are generated for each question, with immediate
+visual feedback and a next-question flow.
+
+### Conduction
+
+Conduction mode displays a simplified **Conduction Map** for normal sinus rhythm.
+It synchronizes the Lead II reference waveform with a conceptual animation of
+SA node, AV node, His bundle, bundle branches, and recovery timing.
+
+This mode is a learning aid. It does not generate true 12-lead waveforms and
+does not strictly reproduce a 3D cardiac electrical vector or clinical
+vectorcardiography.
+
+## Local Development
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Start the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open the app:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```txt
+http://localhost:3000
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Run checks:
 
-## Learn More
+```bash
+npm run lint
+npm run build
+```
 
-To learn more about Next.js, take a look at the following resources:
+## 医療免責 / Medical Disclaimer
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+本アプリは医療従事者・学生・学習者向けの学習用シミュレーターです。
+実際の診断、治療方針決定、救急対応、患者モニタリング、医療機器出力の代替として使用しないでください。
+波形は教育目的で簡略化・合成されており、実際の患者心電図とは異なる場合があります。
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+This application is an educational simulator for healthcare professionals,
+students, and learners.
 
-## Deploy on Vercel
+Do not use ECG Lab as a substitute for clinical diagnosis, treatment decisions,
+emergency response, patient monitoring, or medical device output. The waveforms
+are simplified and/or synthesized for learning purposes, and may differ from
+real patient ECGs.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Roadmap
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Polish the v1.0 Lead II rhythm simulator experience.
+- Improve educational copy and case explanations.
+- Add focused tests around rhythm switching, shock state, quiz generation, and
+  audio controls.
+- Expand rhythm templates only after the current simulator behavior is stable.
+- Treat any future 12-lead ECG or vectorcardiography work as a separate,
+  explicitly scoped feature.

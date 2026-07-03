@@ -122,14 +122,15 @@ const CONDUCTION_PATHS = {
   ],
 } satisfies Record<string, VectorPoint[]>;
 
-const ECG_TIMELINE = {
+const ECG_TIMELINE_MS = {
   cycleStart: 0,
-  pWaveEnd: 15,
-  prSegmentEnd: 30,
-  qrsEnd: 45,
-  stSegmentEnd: 65,
-  tWaveEnd: 90,
-  cycleEnd: 100,
+  pOn: nsrTemplate.fiducialsMs.pOn ?? 120,
+  pOff: nsrTemplate.fiducialsMs.pOff ?? 240,
+  qrsOn: nsrTemplate.fiducialsMs.qrsOn ?? 360,
+  qrsOff: nsrTemplate.fiducialsMs.qrsOff ?? 460,
+  tPeak: nsrTemplate.fiducialsMs.tPeak ?? 640,
+  tEnd: nsrTemplate.fiducialsMs.tEnd ?? 820,
+  cycleEnd: nsrTemplate.durationMs,
 } as const;
 
 const CONDUCTION_COLORS = {
@@ -221,14 +222,14 @@ function easeOutCubic(value: number): number {
   return 1 - Math.pow(1 - t, 3);
 }
 
-function mapTimelineProgress(
-  progress: number,
-  start: number,
-  end: number
-): number {
-  const p = clamp(progress, 0, 100);
+function progressToTemplateMs(progress: number): number {
+  return (clamp(progress, 0, 100) / 100) * nsrTemplate.durationMs;
+}
 
-  return clamp(THREE.MathUtils.mapLinear(p, start, end, 0, 1), 0, 1);
+function progressBetween(ms: number, start: number, end: number): number {
+  if (end <= start) return 0;
+
+  return clamp(THREE.MathUtils.mapLinear(ms, start, end, 0, 1), 0, 1);
 }
 
 function createPulseState(
@@ -246,39 +247,39 @@ function createPulseState(
 }
 
 function getConductionTimeline(progress: number) {
-  const p = clamp(progress, ECG_TIMELINE.cycleStart, ECG_TIMELINE.cycleEnd);
+  const currentMs = progressToTemplateMs(progress);
   const isAtrial =
-    p >= ECG_TIMELINE.cycleStart && p < ECG_TIMELINE.pWaveEnd;
+    currentMs >= ECG_TIMELINE_MS.pOn && currentMs < ECG_TIMELINE_MS.pOff;
   const isAvDelay =
-    p >= ECG_TIMELINE.pWaveEnd && p < ECG_TIMELINE.prSegmentEnd;
+    currentMs >= ECG_TIMELINE_MS.pOff &&
+    currentMs < ECG_TIMELINE_MS.qrsOn;
   const isQrs =
-    p >= ECG_TIMELINE.prSegmentEnd && p < ECG_TIMELINE.qrsEnd;
+    currentMs >= ECG_TIMELINE_MS.qrsOn &&
+    currentMs < ECG_TIMELINE_MS.qrsOff;
   const isStSegment =
-    p >= ECG_TIMELINE.qrsEnd && p < ECG_TIMELINE.stSegmentEnd;
+    currentMs >= ECG_TIMELINE_MS.qrsOff &&
+    currentMs < ECG_TIMELINE_MS.tPeak;
   const isRepolarizing =
-    p >= ECG_TIMELINE.stSegmentEnd && p < ECG_TIMELINE.tWaveEnd;
+    currentMs >= ECG_TIMELINE_MS.tPeak &&
+    currentMs < ECG_TIMELINE_MS.tEnd;
 
   const atrialValue = easeInOutCubic(
-    mapTimelineProgress(
-      p,
-      ECG_TIMELINE.cycleStart,
-      ECG_TIMELINE.pWaveEnd
-    )
+    progressBetween(currentMs, ECG_TIMELINE_MS.pOn, ECG_TIMELINE_MS.pOff)
   );
-  const prValue = mapTimelineProgress(
-    p,
-    ECG_TIMELINE.pWaveEnd,
-    ECG_TIMELINE.prSegmentEnd
+  const prValue = progressBetween(
+    currentMs,
+    ECG_TIMELINE_MS.pOff,
+    ECG_TIMELINE_MS.qrsOn
   );
   const avHisValue =
     prValue < 0.68
       ? easeOutCubic(prValue / 0.68) * 0.18
       : THREE.MathUtils.mapLinear(prValue, 0.68, 1, 0.18, 1);
   const qrsValue = easeOutCubic(
-    mapTimelineProgress(p, ECG_TIMELINE.prSegmentEnd, ECG_TIMELINE.qrsEnd)
+    progressBetween(currentMs, ECG_TIMELINE_MS.qrsOn, ECG_TIMELINE_MS.qrsOff)
   );
   const tWaveValue = easeInOutCubic(
-    mapTimelineProgress(p, ECG_TIMELINE.stSegmentEnd, ECG_TIMELINE.tWaveEnd)
+    progressBetween(currentMs, ECG_TIMELINE_MS.tPeak, ECG_TIMELINE_MS.tEnd)
   );
   const terminalHold = isStSegment;
   const recoveryValue = 1 - tWaveValue;
@@ -324,14 +325,39 @@ function getConductionTimeline(progress: number) {
 }
 
 function getEcgPhaseLabel(progress: number): string {
-  const p = clamp(progress, ECG_TIMELINE.cycleStart, ECG_TIMELINE.cycleEnd);
+  const currentMs = progressToTemplateMs(progress);
 
-  if (p < ECG_TIMELINE.pWaveEnd) return "P wave";
-  if (p < ECG_TIMELINE.prSegmentEnd) return "AV delay";
-  if (p < ECG_TIMELINE.qrsEnd) return "QRS";
-  if (p < ECG_TIMELINE.stSegmentEnd) return "ST segment";
-  if (p < ECG_TIMELINE.tWaveEnd) return "T wave";
-  return "TP reset";
+  if (
+    currentMs >= ECG_TIMELINE_MS.pOn &&
+    currentMs < ECG_TIMELINE_MS.pOff
+  ) {
+    return "P wave";
+  }
+  if (
+    currentMs >= ECG_TIMELINE_MS.pOff &&
+    currentMs < ECG_TIMELINE_MS.qrsOn
+  ) {
+    return "AV delay";
+  }
+  if (
+    currentMs >= ECG_TIMELINE_MS.qrsOn &&
+    currentMs < ECG_TIMELINE_MS.qrsOff
+  ) {
+    return "QRS";
+  }
+  if (
+    currentMs >= ECG_TIMELINE_MS.qrsOff &&
+    currentMs < ECG_TIMELINE_MS.tPeak
+  ) {
+    return "ST segment";
+  }
+  if (
+    currentMs >= ECG_TIMELINE_MS.tPeak &&
+    currentMs < ECG_TIMELINE_MS.tEnd
+  ) {
+    return "T wave";
+  }
+  return "Rest";
 }
 
 const conductionVertexShader = `
@@ -816,20 +842,23 @@ export function VectorVisualizer() {
     <main className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
       <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_minmax(0,0.95fr)] lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:grid-rows-1">
         <section
-          aria-label="3Dベクトル心電図"
+          aria-label="刺激伝導マップ"
           className="relative min-h-0 overflow-hidden border-b border-border bg-[#071018] lg:border-r lg:border-b-0"
         >
           <HeartVectorScene progress={progress} selectedLead={selectedLead} />
           <div className="pointer-events-none absolute top-4 left-4 text-cyan-100">
             <div className="text-xs font-semibold uppercase tracking-wider text-cyan-200/70">
-              Conduction system
+              Conduction Map
             </div>
             <h2 className="text-sm font-semibold md:text-base">
-              SA node to bundle branches
+              刺激伝導マップ
             </h2>
             <div className="mt-2 inline-flex rounded-md border border-cyan-300/20 bg-cyan-300/10 px-2 py-1 font-mono text-[10px] text-cyan-100">
-              Camera Lead {selectedLead}
+              View angle: Lead {selectedLead}-like
             </div>
+            <p className="mt-3 max-w-[18rem] text-xs leading-relaxed text-cyan-100/72">
+              正常洞調律における刺激伝導の概念図です。実際の3D心臓電気ベクトルや12誘導心電図を厳密に再現するものではありません。
+            </p>
           </div>
         </section>
 
@@ -839,13 +868,13 @@ export function VectorVisualizer() {
       </div>
 
       <section
-        aria-label="ベクトル同期スライダー"
+        aria-label="伝導マップ同期スライダー"
         className="shrink-0 border-t border-border bg-card px-4 py-4 md:px-6"
       >
         <div className="mx-auto flex max-w-5xl flex-col gap-4">
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-sm font-semibold">12 Lead camera</h2>
+              <h2 className="text-sm font-semibold">Lead-like view</h2>
               <span className="font-mono text-xs text-muted-foreground">
                 {selectedLead}
               </span>
@@ -853,7 +882,7 @@ export function VectorVisualizer() {
             <div
               className="grid grid-cols-6 gap-1.5 sm:grid-cols-12"
               role="group"
-              aria-label="12誘導カメラ"
+              aria-label="誘導方向を模した視点切り替え"
             >
               {LEADS.map((lead) => {
                 const isActive = selectedLead === lead;
@@ -876,10 +905,13 @@ export function VectorVisualizer() {
                 );
               })}
             </div>
+            <p className="text-xs text-muted-foreground">
+              ※ 現段階では12誘導波形ではなく、誘導方向を模した視点切り替えです。
+            </p>
           </div>
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h2 className="text-sm font-semibold">Vector progress</h2>
+              <h2 className="text-sm font-semibold">Conduction progress</h2>
               <p className="font-mono text-xs text-muted-foreground">
                 {Math.round(progress)}% / {Math.round(currentPoint.ms)}ms /{" "}
                 {currentPoint.mv.toFixed(3)}mV
@@ -895,7 +927,7 @@ export function VectorVisualizer() {
             step={0.5}
             value={[progress]}
             onValueChange={(value) => setProgress(sliderValue(value))}
-            aria-label="心臓ベクトルと心電図波形の同期進行度"
+            aria-label="刺激伝導マップとLead II波形の同期進行度"
           />
         </div>
       </section>

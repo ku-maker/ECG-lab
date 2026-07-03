@@ -19,7 +19,7 @@ const modeTabs: Array<{
 }> = [
   { id: "learning", label: "Learning", icon: GraduationCap },
   { id: "quiz", label: "Quiz", icon: BrainCircuit },
-  { id: "vector", label: "Vector", icon: Activity },
+  { id: "vector", label: "Conduction", icon: Activity },
 ];
 
 export function AppHeader({ appMode, onAppModeChange }: AppHeaderProps) {
@@ -73,11 +73,11 @@ export function AppHeader({ appMode, onAppModeChange }: AppHeaderProps) {
           {appMode === "quiz"
             ? "クイズモード"
             : appMode === "vector"
-              ? "ベクトルPoC"
+              ? "伝導マップ"
               : "学習モード"}
         </Badge>
         <Badge variant="outline" className="font-mono text-xs">
-          Phase 7
+          v1.0
         </Badge>
       </div>
     </header>
