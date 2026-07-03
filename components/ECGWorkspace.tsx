@@ -87,6 +87,12 @@ function QuizPanel({
 }) {
   const hasAnswered = selectedCaseId !== null;
   const isCorrect = selectedCaseId === question?.correctCase.id;
+  const correctCase = question?.correctCase ?? null;
+  const selectedCase =
+    question?.choices.find((choice) => choice.id === selectedCaseId) ?? null;
+  const keyRecognitionPoints = correctCase
+    ? [...correctCase.recognitionTips, ...correctCase.learningPoints].slice(0, 4)
+    : [];
 
   return (
     <div className="flex flex-col gap-4 pb-12">
@@ -138,21 +144,60 @@ function QuizPanel({
           })}
         </div>
 
-        {hasAnswered ? (
-          <div className="mt-5 flex flex-col gap-3 rounded-xl border border-border bg-muted/40 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div
-              className={cn(
-                "text-sm font-semibold",
-                isCorrect ? "text-emerald-600" : "text-destructive"
-              )}
-            >
-              {isCorrect
-                ? "正解"
-                : `不正解 / 正解: ${question?.correctCase.label} (${question?.correctCase.abbr})`}
+        {hasAnswered && correctCase ? (
+          <div className="mt-5 rounded-xl border border-border bg-muted/40 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <div
+                  className={cn(
+                    "text-sm font-semibold",
+                    isCorrect ? "text-emerald-600" : "text-destructive"
+                  )}
+                >
+                  {isCorrect ? "正解" : "不正解"}
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Correct answer / 正解:{" "}
+                  <span className="font-semibold text-foreground">
+                    {correctCase.label} ({correctCase.abbr})
+                  </span>
+                  {!isCorrect && selectedCase ? (
+                    <>
+                      {" "}
+                      / 選択: {selectedCase.label} ({selectedCase.abbr})
+                    </>
+                  ) : null}
+                </p>
+              </div>
+              <Button type="button" onClick={onNextQuestion}>
+                次の問題へ
+              </Button>
             </div>
-            <Button type="button" onClick={onNextQuestion}>
-              次の問題へ
-            </Button>
+
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <section className="space-y-1.5">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground/80">
+                  Why this rhythm?
+                </h3>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  {correctCase.description}
+                </p>
+              </section>
+
+              <section className="space-y-1.5">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground/80">
+                  Key recognition points
+                </h3>
+                <ul className="space-y-1.5 text-sm leading-relaxed text-muted-foreground">
+                  {keyRecognitionPoints.map((point) => (
+                    <li key={point} className="flex gap-2">
+                      <span className="mt-2 size-1 shrink-0 rounded-full bg-current opacity-60" />
+                      <span>{point}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            </div>
           </div>
         ) : null}
       </div>

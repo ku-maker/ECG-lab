@@ -14,7 +14,7 @@ Current release target: **v1.0.0 MVP**.
 ## What You Can Do
 
 - View smooth scrolling Lead II-style ECG waveforms on a monitor-style canvas.
-- Switch between rhythm presets and read short educational explanations.
+- Switch between rhythm presets and review key findings, recognition tips, common pitfalls, and clinical notes.
 - Adjust heart rate where the rhythm supports it.
 - Hear synchronized ECG beeps with mute and volume controls.
 - Trigger defibrillation-style shock behavior for VT/VF learning scenarios.

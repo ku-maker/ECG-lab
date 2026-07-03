@@ -1,6 +1,15 @@
 "use client";
 
-import { BookOpen, Zap, Heart } from "lucide-react";
+import {
+  BookOpen,
+  Heart,
+  Lightbulb,
+  ListChecks,
+  ShieldCheck,
+  TriangleAlert,
+  Zap,
+} from "lucide-react";
+import type { ComponentType } from "react";
 
 import type { ECGCase } from "@/data/ecgCases";
 import { cn } from "@/lib/utils";
@@ -50,6 +59,33 @@ function EmptyState() {
         上のドロップダウンから症例を選択すると、ここに解説が表示されます。
       </p>
     </div>
+  );
+}
+
+function EducationSection({
+  title,
+  icon: Icon,
+  items,
+}: {
+  title: string;
+  icon: ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
+  items: string[];
+}) {
+  return (
+    <section className="space-y-2">
+      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-foreground/80">
+        <Icon className="size-3.5 text-muted-foreground" aria-hidden />
+        {title}
+      </div>
+      <ul className="space-y-1.5 text-sm leading-relaxed text-muted-foreground">
+        {items.map((item) => (
+          <li key={item} className="flex gap-2">
+            <span className="mt-2 size-1 shrink-0 rounded-full bg-current opacity-60" />
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -106,9 +142,47 @@ export function CaseExplanationCard({
             {config.label}
           </span>
         </div>
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          {selectedCase.description}
-        </p>
+        <div className="space-y-5">
+          <section className="space-y-2">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-foreground/80">
+              <BookOpen className="size-3.5 text-muted-foreground" aria-hidden />
+              Overview
+            </div>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {selectedCase.description}
+            </p>
+          </section>
+
+          <div className="grid gap-5 lg:grid-cols-2">
+            <EducationSection
+              title="Key findings"
+              icon={ListChecks}
+              items={selectedCase.learningPoints}
+            />
+            <EducationSection
+              title="Recognition tips"
+              icon={Lightbulb}
+              items={selectedCase.recognitionTips}
+            />
+            <EducationSection
+              title="Common pitfalls"
+              icon={TriangleAlert}
+              items={selectedCase.commonPitfalls}
+            />
+            <section className="space-y-2">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-foreground/80">
+                <ShieldCheck
+                  className="size-3.5 text-muted-foreground"
+                  aria-hidden
+                />
+                Clinical note
+              </div>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {selectedCase.clinicalNote}
+              </p>
+            </section>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -24,6 +24,11 @@ const fiducialOrder = [
 
 const allowedRhythms = new Set(["regular", "irregular", "chaotic"]);
 const allowedSeverities = new Set(["normal", "warning", "critical"]);
+const educationalArrayFields = [
+  "learningPoints",
+  "recognitionTips",
+  "commonPitfalls",
+];
 const errors = [];
 
 function relative(filePath) {
@@ -253,6 +258,13 @@ function getStringField(source, key) {
   return match?.[1] ?? null;
 }
 
+function getStringArrayField(source, key) {
+  const match = source.match(new RegExp(`\\b${key}\\s*:\\s*\\[([\\s\\S]*?)\\]`));
+  if (!match) return null;
+
+  return Array.from(match[1].matchAll(/"([^"]*)"/g), (item) => item[1]);
+}
+
 function getNumberField(source, key) {
   const match = source.match(new RegExp(`\\b${key}\\s*:\\s*(-?\\d+(?:\\.\\d+)?)`));
   return match ? Number(match[1]) : null;
@@ -285,6 +297,8 @@ async function validateCases(templateIds) {
     const templateId = getStringField(caseBlock, "templateId");
     const rhythm = getStringField(caseBlock, "rhythm");
     const severity = getStringField(caseBlock, "severity");
+    const description = getStringField(caseBlock, "description");
+    const clinicalNote = getStringField(caseBlock, "clinicalNote");
     const initialBpm = getNumberField(caseBlock, "initialBpm");
 
     if (!id) {
@@ -308,6 +322,10 @@ async function validateCases(templateIds) {
       addError(casesFile, `${id ?? label}.initialBpm must be a finite number`);
     }
 
+    if (!description || description.trim() === "") {
+      addError(casesFile, `${id ?? label}.description must be a non-empty string`);
+    }
+
     if (!rhythm || !allowedRhythms.has(rhythm)) {
       addError(
         casesFile,
@@ -320,6 +338,31 @@ async function validateCases(templateIds) {
         casesFile,
         `${id ?? label}.severity must be one of: ${Array.from(allowedSeverities).join(", ")}`,
       );
+    }
+
+    for (const field of educationalArrayFields) {
+      const value = getStringArrayField(caseBlock, field);
+      if (!value) {
+        addError(casesFile, `${id ?? label}.${field} must exist`);
+        continue;
+      }
+
+      if (value.length === 0) {
+        addError(casesFile, `${id ?? label}.${field} must not be empty`);
+      }
+
+      value.forEach((item, itemIndex) => {
+        if (item.trim() === "") {
+          addError(
+            casesFile,
+            `${id ?? label}.${field}[${itemIndex}] must be a non-empty string`,
+          );
+        }
+      });
+    }
+
+    if (!clinicalNote || clinicalNote.trim() === "") {
+      addError(casesFile, `${id ?? label}.clinicalNote must be a non-empty string`);
     }
   });
 

@@ -25,6 +25,14 @@ export interface ECGCase {
   severity: "normal" | "warning" | "critical";
   /** 解説文 */
   description: string;
+  /** 学習時に見るべき所見 */
+  learningPoints: string[];
+  /** 初学者向けの見分け方 */
+  recognitionTips: string[];
+  /** 混同しやすいポイント */
+  commonPitfalls: string[];
+  /** 教育用の臨床的注意 */
+  clinicalNote: string;
   /** 新しいテンプレートエンジンに渡す波形テンプレートID */
   templateId: ECGCaseTemplateId;
   /** 症例選択時の初期心拍数 */
@@ -41,6 +49,21 @@ export const ECG_CASES: ECGCase[] = [
     severity: "normal",
     description:
       "すべての基準が正常なお手本となる波形です。規則正しいP波に続いて狭いQRS波が認められ、STは等電位線上にあります。洞結節からの正常な興奮伝導を示しています。",
+    learningPoints: [
+      "RR間隔が規則的で、心拍数が安定しています。",
+      "各QRS波の前にP波があり、P-QRS-Tの順序が保たれています。",
+      "QRS幅は狭く、ST部分はおおむね等電位線上にあります。",
+    ],
+    recognitionTips: [
+      "まずリズムが一定かを見て、次に各QRSの前に同じ形のP波があるか確認します。",
+      "Lead IIではP波が比較的見えやすいため、洞調律の基準波形として比較に使いやすいです。",
+    ],
+    commonPitfalls: [
+      "正常洞調律でも年齢、呼吸、体動で軽い揺らぎが見えることがあります。",
+      "このシミュレーターは教育用のLead II表現であり、実際の正常判定には12誘導や臨床情報が必要です。",
+    ],
+    clinicalNote:
+      "実臨床では症状、バイタルサイン、12誘導心電図、医療者の評価と合わせて解釈します。この表示は診断の代替ではありません。",
     templateId: "nsr-lead2-v0",
     initialBpm: 60,
     rhythm: "regular",
@@ -52,6 +75,21 @@ export const ECG_CASES: ECGCase[] = [
     severity: "warning",
     description:
       "P波が消失し、基線に細かな震え（f波）が認められます。QRS波は比較的狭い一方で、RR間隔が不規則に変動する絶対性不整脈を示します。",
+    learningPoints: [
+      "RR間隔が不規則に変動します。",
+      "明瞭で一貫したP波が見えにくく、基線に細かな揺れが見られます。",
+      "QRS幅は多くの場合で比較的狭く保たれます。",
+    ],
+    recognitionTips: [
+      "AFでは「不規則に不規則」なRR間隔と、一定したP波が見えない点をセットで確認します。",
+      "心拍数だけで判断せず、R波同士の間隔がばらつくかを見ます。",
+    ],
+    commonPitfalls: [
+      "AFLの可変伝導や体動アーティファクトと混同しやすいことがあります。",
+      "基線の揺れだけではAFとは言えず、RR不整とP波の見え方を合わせて確認します。",
+    ],
+    clinicalNote:
+      "実臨床では症状、脈拍、12誘導心電図、基礎疾患、医療者の評価を合わせて判断します。このシミュレーターは教育用です。",
     templateId: "afib-lead2-v0",
     initialBpm: 110,
     rhythm: "irregular",
@@ -63,6 +101,21 @@ export const ECG_CASES: ECGCase[] = [
     severity: "warning",
     description:
       "基本は正常洞調律（NSR）ですが、心室由来の異常な電気信号により、予定より早いタイミングで幅の広い歪んだQRS波（PVC）が突発的に出現します。出現直後の代償性間欠期（長めのポーズ）も再現しています。",
+    learningPoints: [
+      "基本リズムの途中に予定より早い幅広いQRS波が出現します。",
+      "PVC直前に通常のP波がはっきり見えにくいことがあります。",
+      "PVC後に長めの代償性間欠期が見られることがあります。",
+    ],
+    recognitionTips: [
+      "突然現れる「早い」「幅広い」「形が違う」拍を探します。",
+      "PVCのあとに次の正常拍まで少し間が空くかを見ると、PACとの比較に役立ちます。",
+    ],
+    commonPitfalls: [
+      "単発PVCと短いVT、または体動アーティファクトを混同しないようにします。",
+      "教育用波形ではPVCの形を強調しているため、実波形ではより多様な形を取ります。",
+    ],
+    clinicalNote:
+      "実臨床では頻度、症状、基礎心疾患、電解質、12誘導心電図などを含めて評価します。このアプリは診断や治療判断の代替ではありません。",
     templateId: "pvc-lead2-v0",
     initialBpm: 70,
     rhythm: "regular",
@@ -74,6 +127,21 @@ export const ECG_CASES: ECGCase[] = [
     severity: "warning",
     description:
       "基本は正常洞調律（NSR）ですが、心房由来の異常信号により、予定より早いタイミングでQRS波が出現します。PVCとは異なり、QRS波の幅は狭く（正常と同じ形状）、直後のポーズ（非代償性間欠期）はPVCよりわずかに短くなります。",
+    learningPoints: [
+      "予定より早いタイミングで狭いQRS波が出現します。",
+      "早期P波がT波に重なって見えにくいことがあります。",
+      "PVCよりQRS形状が正常拍に近く、ポーズは短めになりやすいです。",
+    ],
+    recognitionTips: [
+      "「早く出るがQRSは狭い」拍を探すとPACを意識しやすくなります。",
+      "T波の形が少し変わって見える場合、隠れたP波を疑って観察します。",
+    ],
+    commonPitfalls: [
+      "PVCとPACをQRS幅だけでなく、タイミングと直後のポーズも合わせて比較します。",
+      "ブロックされたPACやMobitz IIとの区別は、P波とQRS脱落の関係を丁寧に見る必要があります。",
+    ],
+    clinicalNote:
+      "実臨床では症状、頻度、背景疾患、12誘導心電図を合わせて評価します。この表示は学習用の単純化です。",
     templateId: "pac-lead2-v0",
     initialBpm: 75,
     rhythm: "regular",
@@ -85,6 +153,21 @@ export const ECG_CASES: ECGCase[] = [
     severity: "warning",
     description:
       "房室結導系の障害により、規則正しいP波の後に、QRS波が突如として完全に脱落（スキップ）する不整脈です。3拍または4拍に1回の頻度で、心拍が1回分完全に飛びます（フラットライン）。",
+    learningPoints: [
+      "P波は規則的に出現しますが、一部のP波に続くQRS波が脱落します。",
+      "伝導された拍のPR間隔はおおむね一定に見えます。",
+      "心室拍が抜けるため、拍動やビープが一拍分飛ぶように感じられます。",
+    ],
+    recognitionTips: [
+      "規則的なP波を追い、その後にQRSが来ない拍を探します。",
+      "Wenckebach型のようにPRが徐々に延びるパターンではない点に注目します。",
+    ],
+    commonPitfalls: [
+      "アーティファクト、ブロックされたPAC、単なる表示抜けと混同しやすいことがあります。",
+      "このシミュレーターでは脱落パターンを教育用に単純化しています。",
+    ],
+    clinicalNote:
+      "実臨床では徐脈症状、血行動態、薬剤、12誘導心電図、医療者の評価と合わせて扱います。このアプリは臨床判断支援ではありません。",
     templateId: "mobitz2-lead2-v0",
     initialBpm: 60,
     rhythm: "regular",
@@ -96,6 +179,21 @@ export const ECG_CASES: ECGCase[] = [
     severity: "warning",
     description:
       "心房または房室結節の異常な回路により、突発的に頻脈（BPM 150〜220）が発生します。VTと異なりQRS波の幅は狭く（正常）、P波はT波に重なって識別困難になります。",
+    learningPoints: [
+      "速く規則的な頻拍として表示されます。",
+      "QRS幅は狭く、P波はT波に重なって見えにくいことがあります。",
+      "心拍数が高いため、P-QRS-Tの間隔が圧縮されて見えます。",
+    ],
+    recognitionTips: [
+      "「速い」「規則的」「狭いQRS」の組み合わせを確認します。",
+      "P波が見えないからといってVFやVTと決めず、QRSの幅と規則性を見ます。",
+    ],
+    commonPitfalls: [
+      "wide QRS tachycardiaを安易にSVTと判断しないことが重要です。",
+      "実臨床でSVTとVTを見分けるには、12誘導心電図や患者情報が必要です。",
+    ],
+    clinicalNote:
+      "症状、血圧、12誘導心電図、医療者の評価と合わせて解釈します。このシミュレーターは教育用で、治療判断の代替ではありません。",
     templateId: "svt-lead2-v0",
     initialBpm: 180,
     rhythm: "regular",
@@ -106,7 +204,22 @@ export const ECG_CASES: ECGCase[] = [
     abbr: "STEMI",
     severity: "critical",
     description:
-      "冠動脈の完全閉塞により心筋が壊死し始めている状態です。QRS波の直後のST部分がドーム状に高く持ち上がる『ST上昇』が特徴的で、一刻も早い再灌流療法が必要です。",
+      "冠動脈閉塞に伴う心筋虚血を学ぶための教育用モデルです。QRS波の直後のST部分がドーム状に高く持ち上がる『ST上昇』を強調して表現しています。",
+    learningPoints: [
+      "QRS直後のST部分が基線より高く持ち上がって見えます。",
+      "ST上昇がT波へ連続するようにドーム状に見えることがあります。",
+      "リズム自体は規則的でも、ST変化が重要な観察点になります。",
+    ],
+    recognitionTips: [
+      "R波だけでなく、J点からST部分がどこに位置するかを確認します。",
+      "正常洞調律と比較して、ST部分が等電位線より上に持ち上がるかを見ます。",
+    ],
+    commonPitfalls: [
+      "ST上昇の解釈には12誘導心電図、症状、時間経過、他の鑑別が必要です。",
+      "このLead II教育モデルだけでSTEMIの診断や部位判定はできません。",
+    ],
+    clinicalNote:
+      "実臨床では胸痛などの症状、12誘導心電図、心筋マーカー、医療者の判断を合わせます。この表示は教育用の簡略モデルです。",
     templateId: "stemi-lead2-v0",
     initialBpm: 65,
     rhythm: "regular",
@@ -118,6 +231,21 @@ export const ECG_CASES: ECGCase[] = [
     severity: "critical",
     description:
       "波形の振幅が周期的に増減し、基線を軸にねじれるように変化する多形性心室頻拍です。連続する幅広いQRS波が大きくなったり小さくなったりしながら極性を変えます。",
+    learningPoints: [
+      "幅広い頻拍波形が連続し、振幅が周期的に増減します。",
+      "基線を中心に波形がねじれるように見える多形性が特徴です。",
+      "規則的な単形性VTとは異なり、形や高さが変化し続けます。",
+    ],
+    recognitionTips: [
+      "「速いwide complex」に加えて、振幅が大きく小さく変化するかを見ます。",
+      "VFほど完全に無秩序ではなく、ねじれるような周期性が残る点に注目します。",
+    ],
+    commonPitfalls: [
+      "VF、体動アーティファクト、単形性VTとの違いを波形の連続性と振幅変調で比較します。",
+      "QT延長などの背景評価は、このLead IIシミュレーターだけでは扱えません。",
+    ],
+    clinicalNote:
+      "実臨床では薬剤、電解質、QT時間、症状、12誘導心電図を含めて評価します。このアプリは教育用の概念表示です。",
     templateId: "tdp-lead2-v0",
     initialBpm: 200,
     rhythm: "regular",
@@ -129,6 +257,21 @@ export const ECG_CASES: ECGCase[] = [
     severity: "warning",
     description:
       "基線が平坦ではなく、規則正しい連続したノコギリ状のF波（Flutter wave）で満たされます。4:1伝導として、F波4回ごとに狭いQRS波が出現します。",
+    learningPoints: [
+      "基線に規則的な鋸歯状のF波が連続します。",
+      "一定の房室伝導比により、F波数回ごとにQRS波が出現します。",
+      "AFと異なり、心房活動そのものは規則的に見えます。",
+    ],
+    recognitionTips: [
+      "基線が平坦でない場合、連続する鋸歯状波が一定間隔かを観察します。",
+      "QRSだけでなく、QRS間に隠れたF波を数える意識を持つと見分けやすくなります。",
+    ],
+    commonPitfalls: [
+      "可変伝導のAFLはAFのように不規則に見えることがあります。",
+      "このモデルは伝導比を単純化しており、実波形ではF波の見え方が誘導で変わります。",
+    ],
+    clinicalNote:
+      "実臨床では12誘導心電図、脈拍、症状、基礎疾患を合わせて判断します。このシミュレーターは教育用です。",
     templateId: "afl-lead2-v0",
     initialBpm: 75,
     rhythm: "regular",
@@ -140,6 +283,21 @@ export const ECG_CASES: ECGCase[] = [
     severity: "critical",
     description:
       "心房（P波）と心室（QRS波）の電気的連携が完全に断絶し、それぞれが全く別の独立したリズムで打つ状態です。P波と補充調律のQRS波が無関係に出現します。",
+    learningPoints: [
+      "P波とQRS波がそれぞれ独立したリズムで出現します。",
+      "心室補充調律が遅く、全体の心拍数は低く見えます。",
+      "P波がQRSの直前に一定して出る関係が失われます。",
+    ],
+    recognitionTips: [
+      "P波を一つずつ追い、QRSと一定の関係があるか確認します。",
+      "P波だけが連続する区間や、P波とQRSが偶然重なる区間に注目します。",
+    ],
+    commonPitfalls: [
+      "Mobitz II、洞性徐脈、心室性補充調律との区別にはP-QRS関係の観察が重要です。",
+      "このモデルは房室解離の概念を強調した教育用表示です。",
+    ],
+    clinicalNote:
+      "実臨床では症状、血行動態、薬剤、12誘導心電図、医療者の評価が必要です。このアプリは診断や治療判断の代替ではありません。",
     templateId: "avblock3-lead2-v0",
     initialBpm: 35,
     rhythm: "regular",
@@ -150,7 +308,22 @@ export const ECG_CASES: ECGCase[] = [
     abbr: "VT",
     severity: "critical",
     description:
-      "心室由来の幅の広いQRS波が連続する致死性不整脈。直ちに血行動態の評価と除細動の準備が必要です。P波は確認できず、QRS幅は著明に延長しています。",
+      "心室由来の幅の広いQRS波が連続する重要な頻拍波形です。P波は確認しにくく、QRS幅が著明に延長している典型的なwide QRS tachycardiaとして表示しています。",
+    learningPoints: [
+      "速く規則的なwide QRS tachycardiaとして表示されます。",
+      "明瞭なP波は見えにくく、QRS幅が広く変形しています。",
+      "血行動態に影響しうる重要なリズムとして学習します。",
+    ],
+    recognitionTips: [
+      "「速い」「規則的」「幅広いQRS」の組み合わせを優先して確認します。",
+      "SVTと違ってQRSが広く、波形全体が大きく変形して見える点に注目します。",
+    ],
+    commonPitfalls: [
+      "SVT with aberrancyとの鑑別をLead IIだけで断定しないでください。",
+      "教育用テンプレートは典型例を強調しており、実臨床のVTは多様です。",
+    ],
+    clinicalNote:
+      "実臨床では症状、脈拍、血圧、12誘導心電図、医療者の評価と合わせて対応します。このアプリは臨床判断の代替ではありません。",
     templateId: "vt-lead2-v0",
     initialBpm: 160,
     rhythm: "regular",
@@ -161,7 +334,22 @@ export const ECG_CASES: ECGCase[] = [
     abbr: "VF",
     severity: "critical",
     description:
-      "心室の電気活動が完全に破綻し、心室が痙攣している状態です。QRS波は消失し、規則性のない大小の波形が連続します。直ちに除細動が必要な致死性不整脈です。",
+      "心室の電気活動が高度に乱れた状態を学ぶための教育用モデルです。QRS波は消失し、規則性のない大小の波形が連続するように表現しています。",
+    learningPoints: [
+      "organized QRSが消失し、P-QRS-Tの構造が見えません。",
+      "波形は不規則で、振幅や周期が一定しません。",
+      "心拍数として数える対象がなく、規則的なRR間隔もありません。",
+    ],
+    recognitionTips: [
+      "QRS波を探しても一貫した形が見つからない点を確認します。",
+      "VTのような規則的なwide complexではなく、まとまりのないうねりとして見ます。",
+    ],
+    commonPitfalls: [
+      "体動アーティファクト、電極外れ、ノイズと見分けるには患者状態や機器確認が必要です。",
+      "このシミュレーターはcoarse VFの教育用表現であり、実波形のすべてを再現しません。",
+    ],
+    clinicalNote:
+      "実臨床では患者反応、脈拍、モニター、12誘導心電図、救急体制を含めて医療者が判断します。この表示は教育用です。",
     templateId: "vf-lead2-v0",
     initialBpm: 0,
     rhythm: "chaotic",

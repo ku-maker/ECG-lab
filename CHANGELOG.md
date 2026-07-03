@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Expanded all 12 rhythm cases with structured learning points, recognition
+  tips, common pitfalls, and education-focused clinical notes.
+- Improved Learning mode explanation cards with Overview, Key findings,
+  Recognition tips, Common pitfalls, and Clinical note sections.
+- Added Quiz answer feedback that explains the correct rhythm and key
+  recognition points after each response.
+- Extended ECG content validation to check required education fields.
+
 ## 1.0.0 - ECG Lab v1.0 MVP
 
 ECG Lab v1.0 establishes the project as an educational Lead II ECG waveform
