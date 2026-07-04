@@ -80,6 +80,7 @@ type EcgCanvasProps = {
   audioVolume?: number;
   showAnnotations?: boolean;
   annotationCaseId?: string;
+  paused?: boolean;
   width?: number;
   height?: number;
   secondsVisible?: number;
@@ -1437,6 +1438,65 @@ function getWaveformLayout(
   return { baselineY, pxPerMv: nextPxPerMv };
 }
 
+function getAnnotationSnapshotElapsedMs(
+  template: BeatTemplate,
+  bpm: number,
+  secondsVisible: number
+): number {
+  const visibleMs = secondsVisible * 1000;
+  const targetXRatio = 0.44;
+  const activeBpm = getEffectiveBpmForTemplate(template, bpm);
+  const beatMs = activeBpm > 0 ? 60_000 / activeBpm : template.durationMs;
+
+  if (isPvcTemplate(template)) {
+    const pvcPeakTimeMs =
+      (PVC_EVERY_N_BEATS - 1 + PVC_PREMATURE_FRACTION) *
+        getPvcBeatMs(activeBpm) +
+      PVC_PEAK_OFFSET_MS;
+    return pvcPeakTimeMs + (1 - targetXRatio) * visibleMs;
+  }
+
+  if (isMobitz2Template(template)) {
+    const droppedBeatIndex = MOBITZ2_DROP_EVERY_N_BEATS - 1;
+    const pPeakOffsetMs =
+      ((DEFAULT_TEMPLATE.fiducialsMs.pPeak ?? 180) /
+        DEFAULT_TEMPLATE.durationMs) *
+      beatMs;
+    return (
+      droppedBeatIndex * beatMs +
+      pPeakOffsetMs +
+      (1 - 0.73) * visibleMs
+    );
+  }
+
+  if (isWenckebachTemplate(template)) {
+    const droppedBeatIndex = WENCKEBACH_CYCLE_BEATS - 1;
+    return (
+      droppedBeatIndex * beatMs +
+      getWenckebachPPeakOffsetMs(beatMs) +
+      (1 - 0.73) * visibleMs
+    );
+  }
+
+  if (isAflTemplate(template)) {
+    return AFL_QRS_PEAK_OFFSET_MS + (1 - 0.48) * visibleMs;
+  }
+
+  if (isAfTemplate(template)) {
+    return AF_QRS_PEAK_OFFSET_MS + (1 - 0.46) * visibleMs;
+  }
+
+  if (isAvBlock3Template(template)) {
+    return AV_BLOCK_QRS_PEAK_OFFSET_MS + (1 - targetXRatio) * visibleMs;
+  }
+
+  const qrsPeakTemplateMs =
+    template.fiducialsMs.r ?? template.fiducialsMs.qrsOn ?? 0;
+  const qrsPeakOffsetMs = (qrsPeakTemplateMs / template.durationMs) * beatMs;
+
+  return qrsPeakOffsetMs + (1 - targetXRatio) * visibleMs;
+}
+
 function drawGrid(
   ctx: CanvasRenderingContext2D,
   width: number,
@@ -1498,6 +1558,7 @@ function EcgCanvas(
     audioVolume = 0.45,
     showAnnotations = false,
     annotationCaseId,
+    paused = false,
     width,
     height,
     secondsVisible = 6,
@@ -1523,7 +1584,13 @@ function EcgCanvas(
   const lastAudioScanMsRef = useRef(0);
   const lastVfAlarmMsRef = useRef(-Infinity);
   const audioSettingsRef = useRef({ muted: audioMuted, volume: audioVolume });
+  const pausedRef = useRef(paused);
+  const showAnnotationsRef = useRef(showAnnotations);
+  const annotationSnapshotKeyRef = useRef<string | null>(null);
   const [isShockFlashVisible, setIsShockFlashVisible] = useState(false);
+
+  pausedRef.current = paused;
+  showAnnotationsRef.current = showAnnotations;
 
   latestSignalRef.current = {
     bpm: getEffectiveBpmForTemplate(template, bpm),
@@ -1865,7 +1932,28 @@ function EcgCanvas(
         MAX_FRAME_DELTA_MS
       );
       lastFrameTimeRef.current = timestamp;
-      elapsedMsRef.current += deltaMs;
+
+      const isPaused = pausedRef.current;
+      if (isPaused) {
+        const snapshotKey = `${template.id}:${bpm}:${secondsVisible}`;
+        if (
+          showAnnotationsRef.current &&
+          annotationSnapshotKeyRef.current !== snapshotKey
+        ) {
+          elapsedMsRef.current = getAnnotationSnapshotElapsedMs(
+            template,
+            bpm,
+            secondsVisible
+          );
+          lastAudioScanMsRef.current = elapsedMsRef.current;
+          annotationSnapshotKeyRef.current = snapshotKey;
+        }
+        stopFlatlineTone();
+        lastAudioScanMsRef.current = elapsedMsRef.current;
+      } else {
+        annotationSnapshotKeyRef.current = null;
+        elapsedMsRef.current += deltaMs;
+      }
 
       const elapsedMs = elapsedMsRef.current;
       const visibleMs = secondsVisible * 1000;
@@ -1894,6 +1982,7 @@ function EcgCanvas(
       );
 
       if (
+        !isPaused &&
         shockEvent &&
         !shockEvent.completed &&
         elapsedMs - shockEvent.startMs >= SHOCK_FLATLINE_END_MS
@@ -1909,15 +1998,17 @@ function EcgCanvas(
         onLiveBpmChangeRef.current?.(roundedLiveBpm);
       }
 
-      syncAudio(
-        lastAudioScanMsRef.current,
-        elapsedMs,
-        shockEvent,
-        currentDisplayTemplate,
-        currentDisplayBpm,
-        currentDisplayRhythm
-      );
-      lastAudioScanMsRef.current = elapsedMs;
+      if (!isPaused) {
+        syncAudio(
+          lastAudioScanMsRef.current,
+          elapsedMs,
+          shockEvent,
+          currentDisplayTemplate,
+          currentDisplayBpm,
+          currentDisplayRhythm
+        );
+        lastAudioScanMsRef.current = elapsedMs;
+      }
 
       drawGrid(ctx, renderWidth, renderHeight);
 

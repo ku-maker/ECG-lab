@@ -125,6 +125,7 @@ function CompareCaseCard({
           audioVolume={0}
           showAnnotations={showAnnotations}
           annotationCaseId={ecgCase.id}
+          paused={showAnnotations}
           className="absolute inset-0"
         />
       </div>
@@ -241,7 +242,7 @@ export function CompareWorkspace() {
                       Annotations / 波形ラベル
                     </div>
                     <div className="text-[11px] text-muted-foreground">
-                      Compare両側に同じ設定で表示
+                      ONで左右の波形を一時停止
                     </div>
                   </div>
                 </div>
@@ -252,12 +253,15 @@ export function CompareWorkspace() {
                   role="switch"
                   aria-checked={showAnnotations}
                   onClick={() => setShowAnnotations((current) => !current)}
-                  className="shrink-0"
+                  className="h-auto shrink-0 whitespace-normal px-2 py-1.5 text-xs leading-tight"
                 >
-                  {showAnnotations ? "ON" : "OFF"}
+                  {showAnnotations ? "ON（一時停止中）" : "OFF"}
                 </Button>
               </div>
               <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+                ONにすると左右の波形を一時停止し、同じ設定で学習用ラベルを表示します。
+              </p>
+              <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
                 {ANNOTATION_SAFETY_NOTE}
               </p>
             </div>

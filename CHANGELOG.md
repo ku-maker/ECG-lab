@@ -11,6 +11,11 @@
 
 - Improved beginner learning support by helping learners identify where to look on the ECG strip.
 
+### Fixed
+
+- Paused ECG waveform scrolling when annotations are enabled so labels can be compared against a static waveform.
+- Improved annotation toggle wording to clarify that annotations pause the waveform.
+
 ### Safety
 
 - Clarified that annotations are educational guides and not precise measurement, diagnosis, treatment, monitoring, or medical device output.

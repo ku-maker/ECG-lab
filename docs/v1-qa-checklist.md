@@ -39,6 +39,10 @@ safe to show as an educational tool.
 - [ ] Annotation toggle is available in Learning mode.
 - [ ] Annotation toggle is available in Compare mode.
 - [ ] Annotation overlay is off by default.
+- [ ] Enabling annotations pauses the ECG waveform.
+- [ ] Disabling annotations resumes waveform scrolling without a large visual jump.
+- [ ] Annotation labels can be compared against the static waveform.
+- [ ] ECG audio does not continue while the waveform is paused for annotations.
 - [ ] Basic labels do not obscure the ECG waveform excessively.
 - [ ] P wave, QRS, T wave, PR interval, and RR interval labels appear for supported sinus rhythm cases.
 - [ ] Rhythm-specific labels such as Dropped QRS, Wide QRS, or Irregular RR appear only where appropriate.

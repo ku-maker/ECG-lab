@@ -215,7 +215,7 @@ export function ParameterDashboard({
                 Annotations / 波形ラベル
               </div>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                P波、QRS、T波、PR間隔、RR間隔などの観察ポイントを学習用の目安として重ねます。
+                ONにすると波形を一時停止し、P波、QRS、T波、PR間隔、RR間隔などの学習用ラベルを表示します。
               </p>
               <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
                 {ANNOTATION_SAFETY_NOTE}
@@ -230,9 +230,13 @@ export function ParameterDashboard({
             role="switch"
             aria-checked={showAnnotations}
             onClick={() => onShowAnnotationsChange?.(!showAnnotations)}
-            className="h-11 shrink-0 justify-between gap-3 sm:w-36"
+            className="h-auto min-h-11 shrink-0 justify-between gap-3 whitespace-normal px-3 py-2 text-left sm:w-56"
           >
-            <span>{showAnnotations ? "ON" : "OFF"}</span>
+            <span className="min-w-0 leading-tight">
+              {showAnnotations
+                ? "波形ラベル ON（一時停止中）"
+                : "波形ラベル OFF"}
+            </span>
             <span
               aria-hidden
               className={cn(

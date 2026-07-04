@@ -262,6 +262,7 @@ export function ECGWorkspace({ appMode, quizSessionId }: ECGWorkspaceProps) {
     showAnnotations &&
     !isShockInProgress &&
     !isShockComplete;
+  const pauseForAnnotations = showMonitorAnnotations;
 
   useEffect(() => {
     activeCaseRef.current = activeCase;
@@ -394,6 +395,7 @@ export function ECGWorkspace({ appMode, quizSessionId }: ECGWorkspaceProps) {
       audioVolume={audioVolume}
       showAnnotations={showMonitorAnnotations}
       annotationCaseId={activeCase.id}
+      paused={pauseForAnnotations}
       onAudioMutedChange={handleAudioMutedChange}
       onAudioVolumeChange={handleAudioVolumeChange}
       dashboard={controlPanel}
