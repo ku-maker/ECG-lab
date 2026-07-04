@@ -13,6 +13,7 @@ import type { ComponentType } from "react";
 
 import type { ECGCase } from "@/data/ecgCases";
 import { cn } from "@/lib/utils";
+import { WaveformGuideCard } from "@/components/WaveformGuideCard";
 
 interface CaseExplanationCardProps {
   selectedCase: ECGCase | null;
@@ -152,6 +153,8 @@ export function CaseExplanationCard({
               {selectedCase.description}
             </p>
           </section>
+
+          <WaveformGuideCard ecgCase={selectedCase} />
 
           <div className="grid gap-5 lg:grid-cols-2">
             <EducationSection

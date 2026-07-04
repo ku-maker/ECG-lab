@@ -7,15 +7,10 @@ import {
   GitCompareArrows,
   ListChecks,
   ShieldCheck,
-  Tags,
 } from "lucide-react";
 
-import {
-  ANNOTATION_SAFETY_NOTE,
-} from "@/components/EcgAnnotationOverlay";
 import { EcgCanvas } from "@/components/EcgCanvas";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -61,12 +56,10 @@ function CompareCaseCard({
   ecgCase,
   sideLabel,
   missingCaseId,
-  showAnnotations,
 }: {
   ecgCase: ECGCase;
   sideLabel: string;
   missingCaseId?: string;
-  showAnnotations: boolean;
 }) {
   const templateOption = findTemplateOptionByTemplateId(ecgCase.templateId);
   const bpm = getCaseBpm(ecgCase);
@@ -116,16 +109,13 @@ function CompareCaseCard({
         </div>
       ) : null}
 
-      <div className="relative h-60 overflow-hidden bg-[#0a1628] sm:h-64 lg:h-72">
+      <div className="relative h-52 overflow-hidden bg-[#0a1628] sm:h-56 lg:h-60">
         <EcgCanvas
           bpm={bpm}
           rhythm={ecgCase.rhythm ?? "regular"}
           template={templateOption.template}
           audioMuted={true}
           audioVolume={0}
-          showAnnotations={showAnnotations}
-          annotationCaseId={ecgCase.id}
-          paused={showAnnotations}
           className="absolute inset-0"
         />
       </div>
@@ -161,7 +151,6 @@ function CompareCaseCard({
 export function CompareWorkspace() {
   const fallbackCase = ECG_CASES[0];
   const [selectedPairId, setSelectedPairId] = useState(getInitialPair().id);
-  const [showAnnotations, setShowAnnotations] = useState(false);
   const selectedPair = useMemo(
     () => findComparisonPairById(selectedPairId) ?? getInitialPair(),
     [selectedPairId]
@@ -197,7 +186,7 @@ export function CompareWorkspace() {
             </p>
           </div>
 
-          <div className="w-full space-y-3 md:w-80">
+          <div className="w-full md:w-80">
             <label
               htmlFor="comparison-pair-selector"
               className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
@@ -229,42 +218,6 @@ export function CompareWorkspace() {
                 ))}
               </SelectContent>
             </Select>
-
-            <div className="rounded-lg border border-border bg-background/70 p-3">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <Tags
-                    className="size-4 text-emerald-600 dark:text-emerald-400"
-                    aria-hidden
-                  />
-                  <div>
-                    <div className="text-xs font-semibold">
-                      Annotations / 波形ラベル
-                    </div>
-                    <div className="text-[11px] text-muted-foreground">
-                      ONで左右の波形を一時停止
-                    </div>
-                  </div>
-                </div>
-                <Button
-                  type="button"
-                  variant={showAnnotations ? "secondary" : "outline"}
-                  size="sm"
-                  role="switch"
-                  aria-checked={showAnnotations}
-                  onClick={() => setShowAnnotations((current) => !current)}
-                  className="h-auto shrink-0 whitespace-normal px-2 py-1.5 text-xs leading-tight"
-                >
-                  {showAnnotations ? "ON（一時停止中）" : "OFF"}
-                </Button>
-              </div>
-              <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-                ONにすると左右の波形を一時停止し、同じ設定で学習用ラベルを表示します。
-              </p>
-              <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
-                {ANNOTATION_SAFETY_NOTE}
-              </p>
-            </div>
           </div>
         </section>
 
@@ -285,13 +238,11 @@ export function CompareWorkspace() {
             ecgCase={leftCase}
             sideLabel="Left case"
             missingCaseId={missingLeftCaseId}
-            showAnnotations={showAnnotations}
           />
           <CompareCaseCard
             ecgCase={rightCase}
             sideLabel="Right case"
             missingCaseId={missingRightCaseId}
-            showAnnotations={showAnnotations}
           />
         </div>
 

@@ -4,21 +4,23 @@
 
 ### Added
 
-- Added optional educational ECG waveform annotations for supported Learning and Compare views.
-- Added labels for key waveform landmarks such as P wave, QRS, T wave, PR interval, and RR interval where applicable.
+- Added simplified Waveform Guide diagrams for key ECG learning concepts in Learning mode.
+- Added static educational diagrams for selected rhythm concepts instead of overlaying labels on the live ECG canvas.
 
 ### Improved
 
-- Improved beginner learning support by helping learners identify where to look on the ECG strip.
+- Improved readability by reducing the ECG monitor height so learning text and case explanations are easier to view.
+- Kept the live ECG canvas focused on waveform simulation while moving explanatory labels into static guide cards.
 
 ### Fixed
 
-- Paused ECG waveform scrolling when annotations are enabled so labels can be compared against a static waveform.
-- Improved annotation toggle wording to clarify that annotations pause the waveform.
+- Disabled the experimental ECG waveform annotation overlay because label positions were not reliable enough for ECG learning use.
+- Removed inaccurate annotation controls from Learning and Compare views.
 
 ### Safety
 
-- Clarified that annotations are educational guides and not precise measurement, diagnosis, treatment, monitoring, or medical device output.
+- Avoided exposing inaccurate ECG labels that could cause misunderstanding during rhythm learning.
+- Clarified that Waveform Guide diagrams are simplified educational diagrams and not precise measurement, diagnosis, treatment, monitoring, or medical device output.
 
 ## 1.3.0 - Rhythm Compare Mode
 

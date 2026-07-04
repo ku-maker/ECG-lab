@@ -1,46 +1,36 @@
 # ECG Lab v1.4 Roadmap
 
-## Purpose
+## Status
 
-v1.4は、既存17症例のLead II波形に学習用ラベルを表示し、初学者がP波、QRS、T波、PR間隔、RR間隔などの観察ポイントを理解しやすくすることを目的とする。
+Annotation overlay was prototyped but is currently disabled.
 
-## Planned Feature
+## Reason
 
-Annotation overlayを追加します。
+Initial annotation labels were not reliable enough because they were not derived from the exact rendered ECG canvas coordinates. Even NSR labels could appear misaligned, which could mislead learners.
 
-Learning modeとCompare modeで、必要なときだけECG canvas上に簡易ラベルを重ねられるようにします。初期状態はOFFとし、通常の波形観察を妨げないことを優先します。
+## Revised Direction
 
-## Initial Annotation Targets
+v1.4 will use static Waveform Guide diagrams instead of overlaying labels on the live ECG canvas.
 
-- P wave
-- QRS complex
-- T wave
-- PR interval
-- RR interval
-- Dropped QRS, where appropriate
-- Wide QRS, where appropriate
-- Irregular RR, where appropriate
+## Waveform Guide
 
-## Supported Modes
+Waveform Guide diagrams are simplified educational diagrams shown in the Learning explanation area. They help learners understand P wave, QRS complex, T wave, PR interval, RR interval, and selected rhythm comparison concepts.
 
-- Learning mode
-- Compare mode
-- Quiz mode is intentionally not annotated by default
+## Layout Improvement
+
+The ECG monitor area will be made more compact so learning text and case explanations remain readable on both desktop and mobile.
 
 ## Medical Safety
 
-Annotation overlayは心電図学習用の概念表示です。
-
-正確な計測、診断、治療判断、救急対応、患者モニタリング、医療機器出力の代替ではありません。実臨床では12誘導心電図、症状、バイタル、患者背景、医療者評価と合わせて判断します。
+Waveform Guide diagrams are educational diagrams only. They do not replace precise measurement, clinical diagnosis, treatment decisions, patient monitoring, emergency response, or medical device output.
 
 ## Not In Scope
 
-- New rhythm cases
-- 12-lead ECG
-- Vectorcardiography
+- Shipping inaccurate waveform labels
+- Overlaying labels on the live ECG canvas
+- Approximate fixed-position labels over the real waveform
+- Precise measurement calipers
 - Automated ECG diagnosis
 - Treatment recommendation
-- Precise measurement calipers
-- Full waveform analysis engine
-- User accounts
-- Data saving
+- 12-lead ECG
+- Vectorcardiography

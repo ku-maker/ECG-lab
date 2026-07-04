@@ -34,22 +34,20 @@ safe to show as an educational tool.
 - [ ] Compare mode ECG canvases do not play duplicate audio.
 - [ ] Switching away from Compare mode does not break Learning, Quiz, or Conduction modes.
 
-## Annotation Overlay
+## Waveform Guide
 
-- [ ] Annotation toggle is available in Learning mode.
-- [ ] Annotation toggle is available in Compare mode.
-- [ ] Annotation overlay is off by default.
-- [ ] Enabling annotations pauses the ECG waveform.
-- [ ] Disabling annotations resumes waveform scrolling without a large visual jump.
-- [ ] Annotation labels can be compared against the static waveform.
-- [ ] ECG audio does not continue while the waveform is paused for annotations.
-- [ ] Basic labels do not obscure the ECG waveform excessively.
-- [ ] P wave, QRS, T wave, PR interval, and RR interval labels appear for supported sinus rhythm cases.
-- [ ] Rhythm-specific labels such as Dropped QRS, Wide QRS, or Irregular RR appear only where appropriate.
-- [ ] Quiz mode does not reveal annotations during questions.
-- [ ] Annotation safety note is visible or discoverable.
-- [ ] Turning annotations on/off does not break waveform scrolling.
-- [ ] Mobile layout remains usable with annotations enabled.
+- [ ] Waveform Guide appears in Learning mode where supported.
+- [ ] Waveform Guide is shown as a static educational diagram, not as labels over the live ECG canvas.
+- [ ] Waveform Guide includes a safety note that it is not precise measurement or diagnosis.
+- [ ] Unsupported cases do not show misleading waveform labels.
+- [ ] Quiz mode does not reveal Waveform Guide during questions.
+- [ ] Live ECG canvas does not show inaccurate annotation labels.
+
+## Layout / Readability
+
+- [ ] ECG monitor height leaves enough space for case explanations on desktop.
+- [ ] ECG monitor height leaves enough space for learning text on mobile.
+- [ ] Waveform Guide and case explanation remain readable without excessive scrolling.
 
 ## Shock / Audio
 

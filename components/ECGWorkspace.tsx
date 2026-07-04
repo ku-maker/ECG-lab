@@ -239,7 +239,6 @@ export function ECGWorkspace({ appMode, quizSessionId }: ECGWorkspaceProps) {
   const [liveBpm, setLiveBpm] = useState<number | null>(null);
   const [audioMuted, setAudioMuted] = useState(true);
   const [audioVolume, setAudioVolume] = useState(0.45);
-  const [showAnnotations, setShowAnnotations] = useState(false);
   const selectedTemplate = findTemplateOptionByTemplateId(
     activeCase.templateId
   );
@@ -257,12 +256,6 @@ export function ECGWorkspace({ appMode, quizSessionId }: ECGWorkspaceProps) {
     : isAfCase
       ? liveBpm ?? baseBpm
       : effectiveBpm;
-  const showMonitorAnnotations =
-    appMode === "learning" &&
-    showAnnotations &&
-    !isShockInProgress &&
-    !isShockComplete;
-  const pauseForAnnotations = showMonitorAnnotations;
 
   useEffect(() => {
     activeCaseRef.current = activeCase;
@@ -364,8 +357,6 @@ export function ECGWorkspace({ appMode, quizSessionId }: ECGWorkspaceProps) {
         isShockInProgress={isShockInProgress}
         isShockComplete={isShockComplete}
         onReset={handleReset}
-        showAnnotations={showAnnotations}
-        onShowAnnotationsChange={setShowAnnotations}
       />
     </div>
   );
@@ -393,9 +384,6 @@ export function ECGWorkspace({ appMode, quizSessionId }: ECGWorkspaceProps) {
       onLiveBpmChange={setLiveBpm}
       audioMuted={audioMuted}
       audioVolume={audioVolume}
-      showAnnotations={showMonitorAnnotations}
-      annotationCaseId={activeCase.id}
-      paused={pauseForAnnotations}
       onAudioMutedChange={handleAudioMutedChange}
       onAudioVolumeChange={handleAudioVolumeChange}
       dashboard={controlPanel}

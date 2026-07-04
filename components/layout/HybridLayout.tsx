@@ -19,9 +19,6 @@ interface HybridLayoutProps {
   onLiveBpmChange?: (bpm: number | null) => void;
   audioMuted?: boolean;
   audioVolume?: number;
-  showAnnotations?: boolean;
-  annotationCaseId?: string;
-  paused?: boolean;
   onAudioMutedChange?: (muted: boolean) => void;
   onAudioVolumeChange?: (volume: number) => void;
   dashboard: React.ReactNode;
@@ -44,9 +41,6 @@ export function HybridLayout({
   onLiveBpmChange,
   audioMuted = true,
   audioVolume = 0.45,
-  showAnnotations = false,
-  annotationCaseId,
-  paused = false,
   onAudioMutedChange,
   onAudioVolumeChange,
   dashboard,
@@ -57,10 +51,10 @@ export function HybridLayout({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      {/* 上部: ECGモニター領域 (高さ40vhに固定、縮小しない) */}
+      {/* 上部: ECGモニター領域。学習テキストが読めるよう、画面高に対して控えめに固定する。 */}
       <section
         aria-label="心電図モニター"
-        className="relative flex h-[40vh] shrink-0 flex-col border-b border-border bg-[#0a1628]"
+        className="relative flex h-[30vh] min-h-[190px] max-h-[280px] shrink-0 flex-col border-b border-border bg-[#0a1628] md:h-[32vh] md:min-h-[220px] md:max-h-[320px]"
       >
         <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-2 md:px-6">
           <div className="flex items-center gap-2 text-emerald-400">
@@ -117,9 +111,6 @@ export function HybridLayout({
             onLiveBpmChange={onLiveBpmChange}
             audioMuted={audioMuted}
             audioVolume={audioVolume}
-            showAnnotations={showAnnotations}
-            annotationCaseId={annotationCaseId}
-            paused={paused}
             className="absolute inset-0"
           />
         </div>
