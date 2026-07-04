@@ -2,15 +2,35 @@
 
 ## Unreleased
 
+_No unreleased changes._
+
+## 1.3.0 - Rhythm Compare Mode
+
 ### Added
 
 - Added Compare mode for side-by-side review of similar Lead II rhythm cases.
-- Added preset comparison pairs for common beginner learning contrasts.
+- Added preset comparison pairs for common rhythm learning contrasts:
+  - NSR vs Sinus Bradycardia
+  - Sinus Tachycardia vs SVT
+  - First-degree AV Block vs Mobitz I
+  - Mobitz I vs Mobitz II
+  - Sinus Bradycardia vs Junctional Rhythm
+  - AF vs AFL
+  - SVT vs VT
+- Added comparison focus text, key differences, and safety notes for each comparison pair.
+- Added v1.3 roadmap documentation.
 
 ### Improved
 
-- Polished Compare mode layout, documentation, and QA checklist coverage before v1.3 release.
 - Improved rhythm learning workflow by helping learners compare similar patterns directly.
+- Polished Compare mode layout for desktop and narrow screens.
+- Updated README with Compare mode explanation.
+- Updated QA checklist with Compare mode coverage.
+
+### Safety
+
+- Compare mode remains an educational feature and does not replace clinical diagnosis, treatment decisions, emergency response, patient monitoring, or medical device output.
+- Compare mode keeps Lead II comparison scoped as simplified educational pattern learning.
 
 ## 1.2.0 - Lead II Rhythm Expansion
 

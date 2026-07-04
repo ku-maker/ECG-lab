@@ -6,11 +6,11 @@ practice recognition, and understand the rough relationship between a Lead II
 waveform and the cardiac conduction sequence.
 
 The stable baseline is **ECG Lab v1.0: a Lead II-centered ECG simulator**.
-The v1.2 focus is a small set of additional Lead II-friendly rhythm cases for
-learning. The Conduction mode is a supporting concept map, not a complete
+The v1.3 focus is Compare mode for reviewing similar Lead II rhythm cases side
+by side. The Conduction mode is a supporting concept map, not a complete
 vectorcardiography or 12-lead ECG engine.
 
-Current version: **v1.2.0 Lead II rhythm learning expansion**.
+Current version: **v1.3.0 Rhythm Compare Mode**.
 ECG Lab currently includes **17 Lead II-focused rhythm cases**. It remains an
 educational simulator, not a diagnostic tool or 12-lead ECG system.
 
