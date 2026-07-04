@@ -1,7 +1,8 @@
 "use client";
 
-import { Activity, RotateCcw, Zap } from "lucide-react";
+import { Activity, RotateCcw, Tags, Zap } from "lucide-react";
 
+import { ANNOTATION_SAFETY_NOTE } from "@/components/EcgAnnotationOverlay";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import type { ECGCase } from "@/data/ecgCases";
@@ -15,6 +16,8 @@ interface ParameterDashboardProps {
   isShockInProgress?: boolean;
   isShockComplete?: boolean;
   onReset?: () => void;
+  showAnnotations?: boolean;
+  onShowAnnotationsChange?: (enabled: boolean) => void;
 }
 
 function sliderValue(values: number | readonly number[]): number {
@@ -57,6 +60,8 @@ export function ParameterDashboard({
   isShockInProgress = false,
   isShockComplete = false,
   onReset,
+  showAnnotations = false,
+  onShowAnnotationsChange,
 }: ParameterDashboardProps) {
   const bpmUnavailable = selectedCase?.rhythm === "chaotic";
   const lockedBpm = getLockedBpmForTemplateId(selectedCase?.templateId);
@@ -196,6 +201,55 @@ export function ParameterDashboard({
           {shockAvailable
             ? "通電後、電気的飽和とフラットラインを地続きに流し、正常洞調律へ復帰します。"
             : "現在の疾患プリセットの初期BPMで、波形をクリアして描き直します。"}
+        </div>
+      </ParamCard>
+
+      <ParamCard className="md:col-span-3">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 gap-3">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <Tags className="size-5" aria-hidden />
+            </div>
+            <div className="min-w-0">
+              <div className="text-sm font-semibold">
+                Annotations / 波形ラベル
+              </div>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                P波、QRS、T波、PR間隔、RR間隔などの観察ポイントを学習用の目安として重ねます。
+              </p>
+              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                {ANNOTATION_SAFETY_NOTE}
+              </p>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            variant={showAnnotations ? "secondary" : "outline"}
+            size="lg"
+            role="switch"
+            aria-checked={showAnnotations}
+            onClick={() => onShowAnnotationsChange?.(!showAnnotations)}
+            className="h-11 shrink-0 justify-between gap-3 sm:w-36"
+          >
+            <span>{showAnnotations ? "ON" : "OFF"}</span>
+            <span
+              aria-hidden
+              className={cn(
+                "relative h-5 w-9 rounded-full border transition-colors",
+                showAnnotations
+                  ? "border-emerald-500 bg-emerald-500"
+                  : "border-border bg-muted"
+              )}
+            >
+              <span
+                className={cn(
+                  "absolute top-0.5 size-4 rounded-full bg-white shadow transition-transform",
+                  showAnnotations ? "translate-x-4" : "translate-x-0.5"
+                )}
+              />
+            </span>
+          </Button>
         </div>
       </ParamCard>
     </div>

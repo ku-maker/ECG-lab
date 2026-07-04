@@ -2,7 +2,18 @@
 
 ## Unreleased
 
-_No unreleased changes._
+### Added
+
+- Added optional educational ECG waveform annotations for supported Learning and Compare views.
+- Added labels for key waveform landmarks such as P wave, QRS, T wave, PR interval, and RR interval where applicable.
+
+### Improved
+
+- Improved beginner learning support by helping learners identify where to look on the ECG strip.
+
+### Safety
+
+- Clarified that annotations are educational guides and not precise measurement, diagnosis, treatment, monitoring, or medical device output.
 
 ## 1.3.0 - Rhythm Compare Mode
 

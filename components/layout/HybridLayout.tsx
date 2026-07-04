@@ -19,6 +19,8 @@ interface HybridLayoutProps {
   onLiveBpmChange?: (bpm: number | null) => void;
   audioMuted?: boolean;
   audioVolume?: number;
+  showAnnotations?: boolean;
+  annotationCaseId?: string;
   onAudioMutedChange?: (muted: boolean) => void;
   onAudioVolumeChange?: (volume: number) => void;
   dashboard: React.ReactNode;
@@ -41,6 +43,8 @@ export function HybridLayout({
   onLiveBpmChange,
   audioMuted = true,
   audioVolume = 0.45,
+  showAnnotations = false,
+  annotationCaseId,
   onAudioMutedChange,
   onAudioVolumeChange,
   dashboard,
@@ -111,6 +115,8 @@ export function HybridLayout({
             onLiveBpmChange={onLiveBpmChange}
             audioMuted={audioMuted}
             audioVolume={audioVolume}
+            showAnnotations={showAnnotations}
+            annotationCaseId={annotationCaseId}
             className="absolute inset-0"
           />
         </div>

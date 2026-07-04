@@ -7,10 +7,15 @@ import {
   GitCompareArrows,
   ListChecks,
   ShieldCheck,
+  Tags,
 } from "lucide-react";
 
+import {
+  ANNOTATION_SAFETY_NOTE,
+} from "@/components/EcgAnnotationOverlay";
 import { EcgCanvas } from "@/components/EcgCanvas";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -56,10 +61,12 @@ function CompareCaseCard({
   ecgCase,
   sideLabel,
   missingCaseId,
+  showAnnotations,
 }: {
   ecgCase: ECGCase;
   sideLabel: string;
   missingCaseId?: string;
+  showAnnotations: boolean;
 }) {
   const templateOption = findTemplateOptionByTemplateId(ecgCase.templateId);
   const bpm = getCaseBpm(ecgCase);
@@ -116,6 +123,8 @@ function CompareCaseCard({
           template={templateOption.template}
           audioMuted={true}
           audioVolume={0}
+          showAnnotations={showAnnotations}
+          annotationCaseId={ecgCase.id}
           className="absolute inset-0"
         />
       </div>
@@ -151,6 +160,7 @@ function CompareCaseCard({
 export function CompareWorkspace() {
   const fallbackCase = ECG_CASES[0];
   const [selectedPairId, setSelectedPairId] = useState(getInitialPair().id);
+  const [showAnnotations, setShowAnnotations] = useState(false);
   const selectedPair = useMemo(
     () => findComparisonPairById(selectedPairId) ?? getInitialPair(),
     [selectedPairId]
@@ -186,7 +196,7 @@ export function CompareWorkspace() {
             </p>
           </div>
 
-          <div className="w-full md:w-80">
+          <div className="w-full space-y-3 md:w-80">
             <label
               htmlFor="comparison-pair-selector"
               className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
@@ -218,6 +228,39 @@ export function CompareWorkspace() {
                 ))}
               </SelectContent>
             </Select>
+
+            <div className="rounded-lg border border-border bg-background/70 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Tags
+                    className="size-4 text-emerald-600 dark:text-emerald-400"
+                    aria-hidden
+                  />
+                  <div>
+                    <div className="text-xs font-semibold">
+                      Annotations / 波形ラベル
+                    </div>
+                    <div className="text-[11px] text-muted-foreground">
+                      Compare両側に同じ設定で表示
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant={showAnnotations ? "secondary" : "outline"}
+                  size="sm"
+                  role="switch"
+                  aria-checked={showAnnotations}
+                  onClick={() => setShowAnnotations((current) => !current)}
+                  className="shrink-0"
+                >
+                  {showAnnotations ? "ON" : "OFF"}
+                </Button>
+              </div>
+              <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+                {ANNOTATION_SAFETY_NOTE}
+              </p>
+            </div>
           </div>
         </section>
 
@@ -238,11 +281,13 @@ export function CompareWorkspace() {
             ecgCase={leftCase}
             sideLabel="Left case"
             missingCaseId={missingLeftCaseId}
+            showAnnotations={showAnnotations}
           />
           <CompareCaseCard
             ecgCase={rightCase}
             sideLabel="Right case"
             missingCaseId={missingRightCaseId}
+            showAnnotations={showAnnotations}
           />
         </div>
 

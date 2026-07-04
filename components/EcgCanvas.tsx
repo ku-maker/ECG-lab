@@ -12,6 +12,7 @@ import {
   ECG_TEMPLATE_OPTIONS,
   type BeatTemplate,
 } from "@/src/data/ecg/templates";
+import { EcgAnnotationOverlay } from "@/components/EcgAnnotationOverlay";
 import type { ECGCaseRhythm } from "@/data/ecgCases";
 
 const DEFAULT_TEMPLATE = ECG_TEMPLATE_OPTIONS[0].template;
@@ -77,6 +78,8 @@ type EcgCanvasProps = {
   onLiveBpmChange?: (bpm: number | null) => void;
   audioMuted?: boolean;
   audioVolume?: number;
+  showAnnotations?: boolean;
+  annotationCaseId?: string;
   width?: number;
   height?: number;
   secondsVisible?: number;
@@ -1493,6 +1496,8 @@ function EcgCanvas(
     onLiveBpmChange,
     audioMuted = true,
     audioVolume = 0.45,
+    showAnnotations = false,
+    annotationCaseId,
     width,
     height,
     secondsVisible = 6,
@@ -1997,6 +2002,15 @@ function EcgCanvas(
         aria-label="ECG waveform canvas"
         className="block h-full w-full"
       />
+      {showAnnotations ? (
+        <EcgAnnotationOverlay
+          template={template}
+          caseId={annotationCaseId}
+          bpm={bpm}
+          rhythm={rhythm}
+          secondsVisible={secondsVisible}
+        />
+      ) : null}
       <div
         aria-hidden
         className={cn(

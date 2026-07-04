@@ -34,6 +34,19 @@ safe to show as an educational tool.
 - [ ] Compare mode ECG canvases do not play duplicate audio.
 - [ ] Switching away from Compare mode does not break Learning, Quiz, or Conduction modes.
 
+## Annotation Overlay
+
+- [ ] Annotation toggle is available in Learning mode.
+- [ ] Annotation toggle is available in Compare mode.
+- [ ] Annotation overlay is off by default.
+- [ ] Basic labels do not obscure the ECG waveform excessively.
+- [ ] P wave, QRS, T wave, PR interval, and RR interval labels appear for supported sinus rhythm cases.
+- [ ] Rhythm-specific labels such as Dropped QRS, Wide QRS, or Irregular RR appear only where appropriate.
+- [ ] Quiz mode does not reveal annotations during questions.
+- [ ] Annotation safety note is visible or discoverable.
+- [ ] Turning annotations on/off does not break waveform scrolling.
+- [ ] Mobile layout remains usable with annotations enabled.
+
 ## Shock / Audio
 
 - [ ] VT enables the Shock control.
