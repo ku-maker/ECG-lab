@@ -9,9 +9,9 @@ one rhythm at a time.
 The goal is educational pattern comparison, not diagnosis or clinical decision
 support.
 
-## Planned Feature
+## Implemented Feature
 
-Add Compare mode.
+Compare mode has been added as the initial v1.3 feature.
 
 Compare mode displays two selected Lead II rhythm cases side by side, with:
 

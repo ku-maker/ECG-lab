@@ -9,6 +9,7 @@
 
 ### Improved
 
+- Polished Compare mode layout, documentation, and QA checklist coverage before v1.3 release.
 - Improved rhythm learning workflow by helping learners compare similar patterns directly.
 
 ## 1.2.0 - Lead II Rhythm Expansion

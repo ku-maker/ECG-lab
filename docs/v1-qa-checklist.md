@@ -1,8 +1,8 @@
-# ECG Lab v1.0 QA Checklist
+# ECG Lab QA Checklist
 
-Use this checklist before publishing ECG Lab v1.0. The goal is to confirm that
-the current Lead II simulator experience is stable, understandable, and safe to
-show as an educational tool.
+Use this checklist before publishing ECG Lab updates. The goal is to confirm
+that the current Lead II simulator experience is stable, understandable, and
+safe to show as an educational tool.
 
 ## Learning Mode
 
@@ -21,6 +21,18 @@ show as an educational tool.
 - [ ] The correct answer is visually distinguishable after answering.
 - [ ] The "Next Question" flow advances to another question.
 - [ ] The same question is not repeated every time.
+
+## Compare Mode
+
+- [ ] Compare mode can be opened from the header navigation.
+- [ ] Preset comparison pairs can be selected.
+- [ ] Two ECG waveform cards are displayed side by side on desktop.
+- [ ] Two ECG waveform cards stack vertically on narrow screens.
+- [ ] Each compared case shows rhythm name, abbreviation, severity, BPM, waveform, recognition points, and clinical note.
+- [ ] Key differences are displayed for the selected comparison pair.
+- [ ] Safety note is displayed and clearly states that Compare mode is educational and not a diagnostic or treatment tool.
+- [ ] Compare mode ECG canvases do not play duplicate audio.
+- [ ] Switching away from Compare mode does not break Learning, Quiz, or Conduction modes.
 
 ## Shock / Audio
 

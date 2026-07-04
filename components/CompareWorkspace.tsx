@@ -70,12 +70,12 @@ function CompareCaseCard({
 
   return (
     <section className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm">
-      <div className="flex shrink-0 flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-3">
+      <div className="flex shrink-0 flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-3 sm:px-5">
         <div className="min-w-0">
           <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             {sideLabel}
           </div>
-          <h2 className="mt-1 truncate text-base font-semibold">
+          <h2 className="mt-1 text-base font-semibold leading-snug break-words">
             {ecgCase.label}
           </h2>
           <div className="mt-1 flex flex-wrap items-center gap-2">
@@ -109,7 +109,7 @@ function CompareCaseCard({
         </div>
       ) : null}
 
-      <div className="relative h-56 overflow-hidden bg-[#0a1628] md:h-64">
+      <div className="relative h-60 overflow-hidden bg-[#0a1628] sm:h-64 lg:h-72">
         <EcgCanvas
           bpm={bpm}
           rhythm={ecgCase.rhythm ?? "regular"}
@@ -120,7 +120,7 @@ function CompareCaseCard({
         />
       </div>
 
-      <div className="grid gap-4 px-4 py-4 md:grid-cols-[1fr]">
+      <div className="grid gap-4 px-4 py-4 sm:px-5">
         <section>
           <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground/80">
             重要な見分けポイント
@@ -135,7 +135,7 @@ function CompareCaseCard({
           </ul>
         </section>
 
-        <section className="rounded-md border border-border bg-muted/30 p-3">
+        <section className="rounded-md border border-border bg-muted/25 p-3">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground/80">
             Clinical note
           </h3>
@@ -169,7 +169,7 @@ export function CompareWorkspace() {
 
   return (
     <main className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-background">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-5 md:px-6 md:py-6">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-5 sm:px-5 md:px-6 md:py-6">
         <section className="flex flex-col gap-4 rounded-lg border border-border bg-card p-4 shadow-sm md:flex-row md:items-start md:justify-between md:p-5">
           <div className="max-w-3xl">
             <div className="flex items-center gap-2 text-primary">
@@ -246,7 +246,7 @@ export function CompareWorkspace() {
           />
         </div>
 
-        <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.45fr)]">
+        <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(300px,0.45fr)]">
           <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
             <div className="flex items-center gap-2">
               <ListChecks className="size-4 text-primary" aria-hidden />
@@ -270,7 +270,7 @@ export function CompareWorkspace() {
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
               {selectedPair.caution ?? SAFETY_NOTE}
             </p>
-            <p className="mt-3 border-t border-border pt-3 text-xs leading-relaxed text-muted-foreground">
+            <p className="mt-3 rounded-md border border-border bg-muted/25 p-3 text-xs leading-relaxed text-muted-foreground">
               {SAFETY_NOTE}
             </p>
           </div>
