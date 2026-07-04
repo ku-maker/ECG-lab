@@ -2,20 +2,28 @@
 
 ## Unreleased
 
+_No unreleased changes._
+
+## 1.2.0 - Lead II Rhythm Expansion
+
 ### Added
 
-- Added five Lead II-focused rhythm cases for v1.2:
+- Added five Lead II-focused rhythm cases:
   - Sinus Bradycardia
   - Sinus Tachycardia
   - First-degree AV Block
   - Mobitz I / Wenckebach
   - Junctional Rhythm
-- Added medical copy review document for v1.1 educational content.
-- Expanded all 12 rhythm cases with structured learning points, recognition
-  tips, common pitfalls, and education-focused clinical notes.
+- Added template JSON files for the new rhythm cases.
+- Added educational Wenckebach rhythm behavior with progressive PR prolongation
+  and dropped QRS beats.
+- Added roadmap documentation for v1.2.
 
 ### Improved
 
+- Expanded the implemented case library from 12 to 17 rhythms.
+- Updated README implemented cases and learning descriptions.
+- Updated medical copy review documentation to include new v1.2 rhythm cases.
 - Improved Learning mode explanation cards with Overview, Key findings,
   Recognition tips, Common pitfalls, and Clinical note sections.
 - Added Quiz answer feedback that explains the correct rhythm and key
@@ -27,6 +35,8 @@
 
 ### Validation
 
+- Confirmed new cases remain covered by ECG content validation.
+- Maintained educational/non-diagnostic safety positioning.
 - Extended ECG content validation to check required education fields.
 - Added a lightweight clinical note safety wording check.
 

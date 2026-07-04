@@ -1,4 +1,6 @@
-# ECG Lab Medical Copy Review (v1.1+)
+# ECG Lab Medical Copy Review
+
+This document covers educational copy introduced through v1.1 and v1.2.
 
 このドキュメントは、`data/ecgCases.ts` に含まれる17症例の教育用文章を、医学的・教育的にレビューしやすくするための一覧です。v1.2で追加されたLead II中心の基本リズムも同じレビュー観点で扱います。
 

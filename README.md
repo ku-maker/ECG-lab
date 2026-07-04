@@ -10,7 +10,9 @@ The v1.2 focus is a small set of additional Lead II-friendly rhythm cases for
 learning. The Conduction mode is a supporting concept map, not a complete
 vectorcardiography or 12-lead ECG engine.
 
-Current release focus: **v1.2 Lead II rhythm learning expansion**.
+Current version: **v1.2.0 Lead II rhythm learning expansion**.
+ECG Lab currently includes **17 Lead II-focused rhythm cases**. It remains an
+educational simulator, not a diagnostic tool or 12-lead ECG system.
 
 ## What You Can Do
 
