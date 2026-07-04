@@ -34,20 +34,20 @@ safe to show as an educational tool.
 - [ ] Compare mode ECG canvases do not play duplicate audio.
 - [ ] Switching away from Compare mode does not break Learning, Quiz, or Conduction modes.
 
-## Waveform Guide
+## Observation Guide
 
-- [ ] Waveform Guide appears in Learning mode where supported.
-- [ ] Waveform Guide is shown as a static educational diagram, not as labels over the live ECG canvas.
-- [ ] Waveform Guide includes a safety note that it is not precise measurement or diagnosis.
-- [ ] Unsupported cases do not show misleading waveform labels.
-- [ ] Quiz mode does not reveal Waveform Guide during questions.
-- [ ] Live ECG canvas does not show inaccurate annotation labels.
+- [ ] Observation Guide appears in Learning mode.
+- [ ] Observation Guide uses text-based learning points, not waveform labels over the live ECG canvas.
+- [ ] Observation Guide does not show inaccurate static waveform diagrams.
+- [ ] Observation Guide includes a safety note that it is not precise measurement or diagnosis.
+- [ ] Quiz mode does not reveal Observation Guide during questions.
+- [ ] Live ECG canvas does not show annotation labels.
 
 ## Layout / Readability
 
 - [ ] ECG monitor height leaves enough space for case explanations on desktop.
 - [ ] ECG monitor height leaves enough space for learning text on mobile.
-- [ ] Waveform Guide and case explanation remain readable without excessive scrolling.
+- [ ] Observation Guide and case explanation remain readable without excessive scrolling.
 
 ## Shock / Audio
 

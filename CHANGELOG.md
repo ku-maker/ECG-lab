@@ -4,23 +4,24 @@
 
 ### Added
 
-- Added simplified Waveform Guide diagrams for key ECG learning concepts in Learning mode.
-- Added static educational diagrams for selected rhythm concepts instead of overlaying labels on the live ECG canvas.
+- Added text-based Observation Guide cards for ECG rhythm learning in Learning mode.
+- Added rhythm-specific observation points without overlaying labels on the live ECG waveform.
 
 ### Improved
 
 - Improved readability by reducing the ECG monitor height so learning text and case explanations are easier to view.
-- Kept the live ECG canvas focused on waveform simulation while moving explanatory labels into static guide cards.
+- Kept the live ECG canvas focused on waveform simulation while moving learning guidance into text-based guide cards.
 
 ### Fixed
 
 - Disabled the experimental ECG waveform annotation overlay because label positions were not reliable enough for ECG learning use.
 - Removed inaccurate annotation controls from Learning and Compare views.
+- Removed static waveform diagrams after visual review showed they could still be misleading.
 
 ### Safety
 
-- Avoided exposing inaccurate ECG labels that could cause misunderstanding during rhythm learning.
-- Clarified that Waveform Guide diagrams are simplified educational diagrams and not precise measurement, diagnosis, treatment, monitoring, or medical device output.
+- Avoided exposing inaccurate ECG labels or diagrams that could cause misunderstanding during rhythm learning.
+- Clarified that Observation Guides are learning aids and not precise measurement, diagnosis, treatment, monitoring, or medical device output.
 
 ## 1.3.0 - Rhythm Compare Mode
 
