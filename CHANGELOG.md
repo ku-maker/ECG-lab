@@ -2,7 +2,14 @@
 
 ## Unreleased
 
-_No unreleased changes._
+### Added
+
+- Added Compare mode for side-by-side review of similar Lead II rhythm cases.
+- Added preset comparison pairs for common beginner learning contrasts.
+
+### Improved
+
+- Improved rhythm learning workflow by helping learners compare similar patterns directly.
 
 ## 1.2.0 - Lead II Rhythm Expansion
 

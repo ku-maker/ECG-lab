@@ -22,16 +22,18 @@ educational simulator, not a diagnostic tool or 12-lead ECG system.
 - Hear synchronized ECG beeps with mute and volume controls.
 - Trigger defibrillation-style shock behavior for VT/VF learning scenarios.
 - Practice rhythm recognition in Quiz mode with randomized multiple-choice questions.
+- Compare two similar Lead II rhythm cases side by side and review key differences.
 - Explore a simplified Conduction Map synchronized to the NSR Lead II waveform.
 
 ## Screenshots / Demo
 
 ECG Lab は、Lead IIを中心とした学習用心電図シミュレーターです。
 
-現在は以下の3つのモードを実装しています。
+現在は以下の4つのモードを実装しています。
 
 - **Learning**：症例プリセットを選択し、リアルタイム波形・BPM・解説を確認できます。
 - **Quiz**：波形を見てリズムを判定する4択クイズで練習できます。
+- **Compare**：似ているLead II波形を並べて、見分けるポイントを確認できます。
 - **Conduction**：正常洞調律のLead II波形と刺激伝導の流れを同期表示する概念マップです。
 
 > Conduction Map は刺激伝導の理解を補助するための概念図です。
@@ -85,6 +87,12 @@ selected case.
 Quiz mode hides the case name and asks the user to identify the rhythm from the
 waveform. Four answer choices are generated for each question, with immediate
 visual feedback and a next-question flow.
+
+### Compare
+
+Compare mode shows two similar Lead II rhythm cases side by side. It is designed
+for reviewing beginner-friendly contrasts such as sinus tachycardia vs SVT,
+Mobitz I vs Mobitz II, and AF vs AFL.
 
 ### Conduction
 

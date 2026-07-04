@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import type { AppMode } from "@/components/appMode";
+import { CompareWorkspace } from "@/components/CompareWorkspace";
 import { ECGWorkspace } from "@/components/ECGWorkspace";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { AppNav } from "@/components/layout/AppNav";
@@ -27,7 +28,9 @@ export function ECGAppShell() {
     <div className="flex h-dvh flex-col overflow-hidden">
       <AppHeader appMode={appMode} onAppModeChange={handleAppModeChange} />
       <AppNav />
-      {appMode === "vector" ? (
+      {appMode === "compare" ? (
+        <CompareWorkspace />
+      ) : appMode === "vector" ? (
         <VectorVisualizer />
       ) : (
         <ECGWorkspace appMode={appMode} quizSessionId={quizSessionId} />

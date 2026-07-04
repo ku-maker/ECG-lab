@@ -1,6 +1,11 @@
 "use client";
 
-import { Activity, BrainCircuit, GraduationCap } from "lucide-react";
+import {
+  Activity,
+  BrainCircuit,
+  GitCompareArrows,
+  GraduationCap,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +24,7 @@ const modeTabs: Array<{
 }> = [
   { id: "learning", label: "Learning", icon: GraduationCap },
   { id: "quiz", label: "Quiz", icon: BrainCircuit },
+  { id: "compare", label: "Compare", icon: GitCompareArrows },
   { id: "vector", label: "Conduction", icon: Activity },
 ];
 
@@ -72,12 +78,14 @@ export function AppHeader({ appMode, onAppModeChange }: AppHeaderProps) {
         <Badge variant="secondary" className="hidden sm:inline-flex">
           {appMode === "quiz"
             ? "クイズモード"
+            : appMode === "compare"
+              ? "比較モード"
             : appMode === "vector"
               ? "伝導マップ"
               : "学習モード"}
         </Badge>
         <Badge variant="outline" className="font-mono text-xs">
-          v1.0
+          v1.3
         </Badge>
       </div>
     </header>

@@ -1,1 +1,1 @@
-export type AppMode = "learning" | "quiz" | "vector";
+export type AppMode = "learning" | "quiz" | "compare" | "vector";
