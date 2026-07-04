@@ -1,12 +1,17 @@
 import nsrTemplateJson from "@/src/data/ecg/templates/nsr-lead2.json";
+import sinusBradyTemplateJson from "@/src/data/ecg/templates/sinus-brady-lead2.json";
+import sinusTachyTemplateJson from "@/src/data/ecg/templates/sinus-tachy-lead2.json";
 import vtTemplateJson from "@/src/data/ecg/templates/vt-lead2.json";
 import pvcTemplateJson from "@/src/data/ecg/templates/pvc-lead2.json";
 import pacTemplateJson from "@/src/data/ecg/templates/pac-lead2.json";
+import avBlock1TemplateJson from "@/src/data/ecg/templates/avblock1-lead2.json";
 import mobitz2TemplateJson from "@/src/data/ecg/templates/mobitz2-lead2.json";
+import wenckebachTemplateJson from "@/src/data/ecg/templates/wenckebach-lead2.json";
 import svtTemplateJson from "@/src/data/ecg/templates/svt-lead2.json";
 import stemiTemplateJson from "@/src/data/ecg/templates/stemi-lead2.json";
 import tdpTemplateJson from "@/src/data/ecg/templates/tdp-lead2.json";
 import aflTemplateJson from "@/src/data/ecg/templates/afl-lead2.json";
+import junctionalTemplateJson from "@/src/data/ecg/templates/junctional-lead2.json";
 import avblock3TemplateJson from "@/src/data/ecg/templates/avblock3-lead2.json";
 import afTemplateJson from "@/src/data/ecg/templates/afib-lead2.json";
 import vfTemplateJson from "@/src/data/ecg/templates/vf-lead2.json";
@@ -38,27 +43,37 @@ export type BeatTemplate = {
 
 export type EcgTemplateId =
   | "nsr"
+  | "sinusBrady"
+  | "sinusTachy"
   | "vt"
   | "pvc"
   | "pac"
+  | "avblock1"
   | "mobitz2"
+  | "wenckebach"
   | "svt"
   | "stemi"
   | "tdp"
   | "afl"
+  | "junctional"
   | "avblock3"
   | "af"
   | "vf";
 export type EcgTemplateJsonId =
   | "nsr-lead2-v0"
+  | "sinus-brady-lead2-v0"
+  | "sinus-tachy-lead2-v0"
   | "vt-lead2-v0"
   | "pvc-lead2-v0"
   | "pac-lead2-v0"
+  | "avblock1-lead2-v0"
   | "mobitz2-lead2-v0"
+  | "wenckebach-lead2-v0"
   | "svt-lead2-v0"
   | "stemi-lead2-v0"
   | "tdp-lead2-v0"
   | "afl-lead2-v0"
+  | "junctional-lead2-v0"
   | "avblock3-lead2-v0"
   | "afib-lead2-v0"
   | "vf-lead2-v0";
@@ -83,6 +98,26 @@ export const ECG_TEMPLATE_OPTIONS: EcgTemplateOption[] = [
       "規則正しいP波に続いて幅の狭いQRS波が出現する、基準となる正常波形です。",
     defaultBpm: 72,
     template: nsrTemplateJson as BeatTemplate,
+  },
+  {
+    id: "sinusBrady",
+    label: "洞性徐脈",
+    abbr: "Brady",
+    severity: "warning",
+    description:
+      "洞調律のP-QRS-T構造を保ったまま、心拍数が遅いリズムです。",
+    defaultBpm: 45,
+    template: sinusBradyTemplateJson as BeatTemplate,
+  },
+  {
+    id: "sinusTachy",
+    label: "洞性頻脈",
+    abbr: "Tachy",
+    severity: "warning",
+    description:
+      "洞調律のP-QRS-T構造を保ったまま、心拍数が速いリズムです。",
+    defaultBpm: 120,
+    template: sinusTachyTemplateJson as BeatTemplate,
   },
   {
     id: "af",
@@ -115,6 +150,16 @@ export const ECG_TEMPLATE_OPTIONS: EcgTemplateOption[] = [
     template: pacTemplateJson as BeatTemplate,
   },
   {
+    id: "avblock1",
+    label: "1度房室ブロック",
+    abbr: "1AVB",
+    severity: "warning",
+    description:
+      "PR間隔が延長しますが、すべてのP波がQRSへ伝導する教育用リズムです。",
+    defaultBpm: 60,
+    template: avBlock1TemplateJson as BeatTemplate,
+  },
+  {
     id: "mobitz2",
     label: "2度房室ブロック",
     abbr: "Mobitz II",
@@ -123,6 +168,16 @@ export const ECG_TEMPLATE_OPTIONS: EcgTemplateOption[] = [
       "規則正しいP波のあと、一定周期でQRS波が完全に脱落します。",
     defaultBpm: 60,
     template: mobitz2TemplateJson as BeatTemplate,
+  },
+  {
+    id: "wenckebach",
+    label: "Wenckebach型2度房室ブロック",
+    abbr: "Mobitz I",
+    severity: "warning",
+    description:
+      "PR間隔が徐々に延長し、その後QRSが脱落して周期がリセットされる教育用リズムです。",
+    defaultBpm: 60,
+    template: wenckebachTemplateJson as BeatTemplate,
   },
   {
     id: "svt",
@@ -163,6 +218,16 @@ export const ECG_TEMPLATE_OPTIONS: EcgTemplateOption[] = [
       "連続したノコギリ状F波の上に、4:1伝導で狭いQRS波が重なります。",
     defaultBpm: 75,
     template: aflTemplateJson as BeatTemplate,
+  },
+  {
+    id: "junctional",
+    label: "接合部調律",
+    abbr: "Junctional",
+    severity: "warning",
+    description:
+      "房室接合部付近を起源とし、P波が見えにくいことのある比較的規則的なリズムです。",
+    defaultBpm: 45,
+    template: junctionalTemplateJson as BeatTemplate,
   },
   {
     id: "avblock3",

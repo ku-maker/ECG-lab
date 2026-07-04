@@ -38,6 +38,8 @@ const PAC_DURATION_FRACTION = 0.82;
 const PAC_PAUSE_MS = 420;
 const MOBITZ2_DROP_EVERY_N_BEATS = 4;
 const MOBITZ2_DISPLAY_RANGE_MV = { min: -0.35, max: 1.15 };
+const WENCKEBACH_CYCLE_BEATS = 4;
+const WENCKEBACH_PR_DELAY_FRACTIONS = [0.22, 0.31, 0.4] as const;
 const SVT_LOCKED_BPM = 180;
 const SVT_DISPLAY_RANGE_MV = { min: -0.35, max: 1.15 };
 const STEMI_DISPLAY_RANGE_MV = { min: -0.2, max: 1.2 };
@@ -163,6 +165,11 @@ function isPacTemplate(template: BeatTemplate): boolean {
 function isMobitz2Template(template: BeatTemplate): boolean {
   const templateId = template.id.toLowerCase();
   return templateId.includes("mobitz2") || templateId.includes("mobitz");
+}
+
+function isWenckebachTemplate(template: BeatTemplate): boolean {
+  const templateId = template.id.toLowerCase();
+  return templateId.includes("wenckebach") || templateId.includes("mobitz1");
 }
 
 function isSvtTemplate(template: BeatTemplate): boolean {
@@ -373,6 +380,58 @@ function getMobitz2RhythmValueAtTimeMs(timeMs: number, bpm: number): number {
   }
 
   return 0;
+}
+
+function getWenckebachBeatMs(bpm: number): number {
+  return bpm > 0 ? 60_000 / bpm : DEFAULT_TEMPLATE.durationMs;
+}
+
+function getWenckebachCycleIndex(beatIndex: number): number {
+  return (
+    ((beatIndex % WENCKEBACH_CYCLE_BEATS) + WENCKEBACH_CYCLE_BEATS) %
+    WENCKEBACH_CYCLE_BEATS
+  );
+}
+
+function isWenckebachDroppedBeat(beatIndex: number): boolean {
+  return getWenckebachCycleIndex(beatIndex) === WENCKEBACH_CYCLE_BEATS - 1;
+}
+
+function getWenckebachPPeakOffsetMs(beatMs: number): number {
+  return beatMs * 0.15;
+}
+
+function getWenckebachQrsPeakOffsetMs(
+  beatMs: number,
+  beatIndex: number
+): number | null {
+  if (isWenckebachDroppedBeat(beatIndex)) return null;
+
+  const cycleIndex = getWenckebachCycleIndex(beatIndex);
+  const prDelayMs = WENCKEBACH_PR_DELAY_FRACTIONS[cycleIndex] * beatMs;
+  return getWenckebachPPeakOffsetMs(beatMs) + prDelayMs;
+}
+
+function getWenckebachRhythmValueAtTimeMs(timeMs: number, bpm: number): number {
+  const beatMs = getWenckebachBeatMs(bpm);
+  const beatIndex = Math.floor(timeMs / beatMs);
+  let value = 0;
+
+  for (let i = beatIndex - 1; i <= beatIndex + 1; i++) {
+    const beatStartMs = i * beatMs;
+    const pPeakTimeMs = beatStartMs + getWenckebachPPeakOffsetMs(beatMs);
+    const qrsPeakOffsetMs = getWenckebachQrsPeakOffsetMs(beatMs, i);
+
+    value += getPOnlyValueAtOffsetMs(timeMs - pPeakTimeMs);
+
+    if (qrsPeakOffsetMs !== null) {
+      value += getNarrowQrsValueAtOffsetMs(
+        timeMs - (beatStartMs + qrsPeakOffsetMs)
+      );
+    }
+  }
+
+  return value;
 }
 
 function getSvtRhythmValueAtTimeMs(timeMs: number): number {
@@ -728,6 +787,10 @@ function getRhythmValueAtTimeMs(
     return getMobitz2RhythmValueAtTimeMs(timeMs, effectiveBpm);
   }
 
+  if (isWenckebachTemplate(template)) {
+    return getWenckebachRhythmValueAtTimeMs(timeMs, effectiveBpm);
+  }
+
   if (isAfTemplate(template)) {
     return getAfEcgValueAtTimeMs(timeMs, effectiveBpm);
   }
@@ -948,6 +1011,27 @@ function forEachQrsPeakInRange(
       beatIndex++
     ) {
       if (isMobitz2DroppedBeat(beatIndex)) continue;
+      const peakTimeMs = beatIndex * beatMs + qrsPeakOffsetMs;
+      if (peakTimeMs > fromMs && peakTimeMs <= toMs) {
+        callback(peakTimeMs);
+      }
+    }
+    return;
+  }
+
+  if (isWenckebachTemplate(template)) {
+    const beatMs = getWenckebachBeatMs(activeBpm);
+    const firstBeatIndex = Math.floor(fromMs / beatMs) - 2;
+    const lastBeatIndex = Math.floor(toMs / beatMs) + 2;
+
+    for (
+      let beatIndex = firstBeatIndex;
+      beatIndex <= lastBeatIndex;
+      beatIndex++
+    ) {
+      const qrsPeakOffsetMs = getWenckebachQrsPeakOffsetMs(beatMs, beatIndex);
+      if (qrsPeakOffsetMs === null) continue;
+
       const peakTimeMs = beatIndex * beatMs + qrsPeakOffsetMs;
       if (peakTimeMs > fromMs && peakTimeMs <= toMs) {
         callback(peakTimeMs);
@@ -1186,6 +1270,45 @@ function buildWaveformSampleXs(
     return xs.sort((a, b) => a - b);
   }
 
+  if (isWenckebachTemplate(template)) {
+    const beatMs = getWenckebachBeatMs(activeBpm);
+    const firstBeatIndex = Math.floor(visibleStartMs / beatMs) - 1;
+    const lastBeatIndex = Math.floor(elapsedMs / beatMs) + 1;
+
+    for (
+      let beatIndex = firstBeatIndex;
+      beatIndex <= lastBeatIndex;
+      beatIndex++
+    ) {
+      const beatStartMs = beatIndex * beatMs;
+      const pPeakOffsetMs = getWenckebachPPeakOffsetMs(beatMs);
+      const qrsPeakOffsetMs = getWenckebachQrsPeakOffsetMs(beatMs, beatIndex);
+      const sampleOffsets = [
+        pPeakOffsetMs - 70,
+        pPeakOffsetMs,
+        pPeakOffsetMs + 70,
+      ];
+
+      if (qrsPeakOffsetMs !== null) {
+        sampleOffsets.push(
+          qrsPeakOffsetMs - 35,
+          qrsPeakOffsetMs,
+          qrsPeakOffsetMs + 45,
+          qrsPeakOffsetMs + 205
+        );
+      }
+
+      for (const sampleOffsetMs of sampleOffsets) {
+        const sampleTimeMs = beatStartMs + sampleOffsetMs;
+        if (sampleTimeMs < visibleStartMs || sampleTimeMs > elapsedMs) continue;
+        const x = ((sampleTimeMs - visibleStartMs) / visibleMs) * width;
+        if (x >= 0 && x <= width) xs.push(x);
+      }
+    }
+
+    return xs.sort((a, b) => a - b);
+  }
+
   const hasAfTiming = isAfTemplate(template);
   const hasIrregularTiming = !hasAfTiming && rhythm === "irregular";
   const firstBeatIndex = hasAfTiming
@@ -1234,7 +1357,11 @@ function getTemplateRange(template: BeatTemplate): { min: number; max: number } 
     return PVC_DISPLAY_RANGE_MV;
   }
 
-  if (isPacTemplate(template) || isMobitz2Template(template)) {
+  if (
+    isPacTemplate(template) ||
+    isMobitz2Template(template) ||
+    isWenckebachTemplate(template)
+  ) {
     return MOBITZ2_DISPLAY_RANGE_MV;
   }
 

@@ -1,13 +1,18 @@
 export type ECGCaseTemplateId =
   | "nsr-lead2-v0"
+  | "sinus-brady-lead2-v0"
+  | "sinus-tachy-lead2-v0"
   | "vt-lead2-v0"
   | "pvc-lead2-v0"
   | "pac-lead2-v0"
+  | "avblock1-lead2-v0"
   | "mobitz2-lead2-v0"
+  | "wenckebach-lead2-v0"
   | "svt-lead2-v0"
   | "stemi-lead2-v0"
   | "tdp-lead2-v0"
   | "afl-lead2-v0"
+  | "junctional-lead2-v0"
   | "avblock3-lead2-v0"
   | "afib-lead2-v0"
   | "vf-lead2-v0";
@@ -66,6 +71,58 @@ export const ECG_CASES: ECGCase[] = [
       "実臨床では症状、バイタルサイン、12誘導心電図、医療者の評価と合わせて解釈します。この表示は診断の代替ではありません。",
     templateId: "nsr-lead2-v0",
     initialBpm: 60,
+    rhythm: "regular",
+  },
+  {
+    id: "sinus-brady",
+    label: "洞性徐脈",
+    abbr: "Sinus Brady",
+    severity: "warning",
+    description:
+      "正常洞調律と同じP-QRS-T構造を保ったまま、心拍数が遅くなったリズムです。各QRS波の前にP波があり、RR間隔が長く規則的に見えます。",
+    learningPoints: [
+      "RR間隔が長く、心拍数が低く表示されます。",
+      "各QRS波の前にP波があり、P-QRS-Tの順序は保たれます。",
+      "QRS幅は狭く、NSRとの主な違いは心拍数です。",
+    ],
+    recognitionTips: [
+      "正常洞調律と同じ形を保っているかを確認してから、RR間隔の長さを見ます。",
+      "P波とQRSが1対1で対応していれば、単なる徐脈ではなく洞性の構造を意識しやすくなります。",
+    ],
+    commonPitfalls: [
+      "3度房室ブロックや接合部調律など、P波とQRSの関係が異なる徐脈と混同しないようにします。",
+      "Lead IIだけで原因や臨床的な意味を断定しないでください。",
+    ],
+    clinicalNote:
+      "実臨床では症状、バイタル、薬剤、基礎疾患、12誘導心電図、医療者の評価と合わせて解釈します。この表示は教育用で診断の代替ではありません。",
+    templateId: "sinus-brady-lead2-v0",
+    initialBpm: 45,
+    rhythm: "regular",
+  },
+  {
+    id: "sinus-tachy",
+    label: "洞性頻脈",
+    abbr: "Sinus Tachy",
+    severity: "warning",
+    description:
+      "洞調律のP-QRS-T構造を保ったまま、心拍数が速くなったリズムです。P波が各QRS波の前にあり、狭いQRSが規則的に連続します。",
+    learningPoints: [
+      "RR間隔が短く、心拍数が高く表示されます。",
+      "各QRS波の前にP波があり、洞調律の構造は保たれます。",
+      "QRS幅は狭く、NSRと同じ基本構造のまま速くなります。",
+    ],
+    recognitionTips: [
+      "速いリズムでも、P波が各QRSの前に見えるかを確認します。",
+      "SVTとの比較では、P波の見え方、発症様式、臨床背景が重要であることを意識します。",
+    ],
+    commonPitfalls: [
+      "SVTとの鑑別をLead IIだけで断定しないでください。",
+      "心拍数が速いだけで病態を決めず、発熱、疼痛、脱水、貧血、低酸素などの背景が必要です。",
+    ],
+    clinicalNote:
+      "実臨床では症状、バイタル、背景疾患、12誘導心電図、医療者の評価と合わせて判断します。このシミュレーターは教育用です。",
+    templateId: "sinus-tachy-lead2-v0",
+    initialBpm: 120,
     rhythm: "regular",
   },
   {
@@ -147,6 +204,32 @@ export const ECG_CASES: ECGCase[] = [
     rhythm: "regular",
   },
   {
+    id: "avblock1",
+    label: "1度房室ブロック",
+    abbr: "1AVB",
+    severity: "warning",
+    description:
+      "P波からQRS波までの時間、つまりPR間隔が延長しているリズムです。すべてのP波がQRS波へ伝導するため、Mobitz系のようなQRS脱落はありません。",
+    learningPoints: [
+      "PR間隔が長く表示されます。",
+      "すべてのP波にQRS波が続きます。",
+      "RR間隔は規則的で、QRS幅は多くの場合で狭く見えます。",
+    ],
+    recognitionTips: [
+      "P波を見つけ、そのあとQRS波までの間が長いかを観察します。",
+      "QRSが脱落しない点を、Mobitz IやMobitz IIとの比較ポイントにします。",
+    ],
+    commonPitfalls: [
+      "PR延長の評価は表示速度や測定条件に影響されるため、Lead IIだけで断定しないでください。",
+      "このアプリでは教育用にPR延長を強調しており、実波形ではより微妙なことがあります。",
+    ],
+    clinicalNote:
+      "実臨床では12誘導心電図、薬剤、症状、基礎疾患、医療者の評価と合わせて扱います。この表示は教育用で診断の代替ではありません。",
+    templateId: "avblock1-lead2-v0",
+    initialBpm: 60,
+    rhythm: "regular",
+  },
+  {
     id: "mobitz2",
     label: "2度房室ブロック",
     abbr: "Mobitz II",
@@ -169,6 +252,32 @@ export const ECG_CASES: ECGCase[] = [
     clinicalNote:
       "実臨床では徐脈症状、血行動態、薬剤、12誘導心電図、医療者の評価と合わせて扱います。このアプリは臨床判断支援ではありません。",
     templateId: "mobitz2-lead2-v0",
+    initialBpm: 60,
+    rhythm: "regular",
+  },
+  {
+    id: "wenckebach",
+    label: "Wenckebach型2度房室ブロック",
+    abbr: "Mobitz I",
+    severity: "warning",
+    description:
+      "P波は比較的規則的に出現し、PR間隔が拍ごとに徐々に延長したあと、最後にQRS波が脱落して周期がリセットされる教育用モデルです。",
+    learningPoints: [
+      "P波は比較的規則的に出現します。",
+      "PR間隔が徐々に延長します。",
+      "周期の最後にQRS波が脱落し、その後PR間隔が短い状態へ戻ります。",
+    ],
+    recognitionTips: [
+      "P波からQRS波までの間隔を拍ごとに比べ、少しずつ長くなるかを見ます。",
+      "Mobitz IIのようにPR間隔が一定のまま突然脱落するパターンではない点を確認します。",
+    ],
+    commonPitfalls: [
+      "Mobitz II、ブロックされたPAC、アーティファクトとの混同に注意します。",
+      "このシミュレーターではWenckebach周期を教育用に単純化しています。",
+    ],
+    clinicalNote:
+      "実臨床では症状、血行動態、薬剤、基礎疾患、12誘導心電図、医療者の評価と合わせて判断します。この表示は学習用で治療判断の代替ではありません。",
+    templateId: "wenckebach-lead2-v0",
     initialBpm: 60,
     rhythm: "regular",
   },
@@ -274,6 +383,32 @@ export const ECG_CASES: ECGCase[] = [
       "実臨床では12誘導心電図、脈拍、症状、基礎疾患を合わせて判断します。このシミュレーターは教育用です。",
     templateId: "afl-lead2-v0",
     initialBpm: 75,
+    rhythm: "regular",
+  },
+  {
+    id: "junctional",
+    label: "接合部調律",
+    abbr: "Junctional",
+    severity: "warning",
+    description:
+      "洞結節ではなく房室接合部付近からの興奮を学ぶための教育用リズムです。QRS波は多くの場合で狭く、P波は見えにくい、QRS近傍に重なる、または逆行性に見えることがあります。",
+    learningPoints: [
+      "QRS幅は多くの場合で狭く表示されます。",
+      "P波が見えにくい、QRSの直前・直後に小さく見える、または逆行性に見えることがあります。",
+      "比較的規則的な徐脈として見え、洞性徐脈との比較に役立ちます。",
+    ],
+    recognitionTips: [
+      "洞性徐脈と比べて、P波が各QRSの前に明瞭に見えるかを確認します。",
+      "QRS近傍の小さな陰性波や、P波が見えないリズムとして観察します。",
+    ],
+    commonPitfalls: [
+      "洞性徐脈、3度房室ブロック、低振幅P波と混同しやすいことがあります。",
+      "実波形ではP波の見え方に幅があるため、このシミュレーターでは教育用に単純化しています。",
+    ],
+    clinicalNote:
+      "実臨床では症状、バイタル、薬剤、基礎疾患、12誘導心電図、医療者の評価と合わせて解釈します。この表示は教育用で診断の代替ではありません。",
+    templateId: "junctional-lead2-v0",
+    initialBpm: 45,
     rhythm: "regular",
   },
   {

@@ -4,6 +4,12 @@
 
 ### Added
 
+- Added five Lead II-focused rhythm cases for v1.2:
+  - Sinus Bradycardia
+  - Sinus Tachycardia
+  - First-degree AV Block
+  - Mobitz I / Wenckebach
+  - Junctional Rhythm
 - Added medical copy review document for v1.1 educational content.
 - Expanded all 12 rhythm cases with structured learning points, recognition
   tips, common pitfalls, and education-focused clinical notes.

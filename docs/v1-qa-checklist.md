@@ -6,7 +6,7 @@ show as an educational tool.
 
 ## Learning Mode
 
-- [ ] All 12 cases can be selected from the case selector.
+- [ ] All 17 cases can be selected from the case selector.
 - [ ] Each case renders an ECG waveform on the monitor canvas.
 - [ ] Each case shows its educational explanation.
 - [ ] Cases with adjustable BPM respond smoothly when the heart-rate control is changed.
