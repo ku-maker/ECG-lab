@@ -67,11 +67,15 @@ function EducationSection({
   title,
   icon: Icon,
   items,
+  maxItems,
 }: {
   title: string;
   icon: ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
   items: string[];
+  maxItems?: number;
 }) {
+  const visibleItems = maxItems ? items.slice(0, maxItems) : items;
+
   return (
     <section className="space-y-2">
       <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-foreground/80">
@@ -79,7 +83,7 @@ function EducationSection({
         {title}
       </div>
       <ul className="space-y-1.5 text-sm leading-relaxed text-muted-foreground">
-        {items.map((item) => (
+        {visibleItems.map((item) => (
           <li key={item} className="flex gap-2">
             <span className="mt-2 size-1 shrink-0 rounded-full bg-current opacity-60" />
             <span>{item}</span>
@@ -161,16 +165,19 @@ export function CaseExplanationCard({
               title="Key findings"
               icon={ListChecks}
               items={selectedCase.learningPoints}
+              maxItems={4}
             />
             <EducationSection
               title="Recognition tips"
               icon={Lightbulb}
               items={selectedCase.recognitionTips}
+              maxItems={4}
             />
             <EducationSection
               title="Common pitfalls"
               icon={TriangleAlert}
               items={selectedCase.commonPitfalls}
+              maxItems={3}
             />
             <section className="space-y-2">
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-foreground/80">
@@ -180,7 +187,7 @@ export function CaseExplanationCard({
                 />
                 Clinical note
               </div>
-              <p className="text-sm leading-relaxed text-muted-foreground">
+              <p className="text-xs leading-relaxed text-muted-foreground md:text-sm">
                 {selectedCase.clinicalNote}
               </p>
             </section>

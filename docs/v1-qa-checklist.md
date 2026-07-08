@@ -37,9 +37,11 @@ safe to show as an educational tool.
 ## Observation Guide
 
 - [ ] Observation Guide appears in Learning mode.
-- [ ] Observation Guide uses text-based learning points, not waveform labels over the live ECG canvas.
-- [ ] Observation Guide does not show inaccurate static waveform diagrams.
-- [ ] Observation Guide includes a safety note that it is not precise measurement or diagnosis.
+- [ ] Observation Guide is concise and easy to scan.
+- [ ] Each guide uses short rhythm-reading checklist items.
+- [ ] No waveform labels or static waveform diagrams are shown.
+- [ ] Safety note remains visible but does not dominate the card.
+- [ ] Mobile layout remains readable without dense paragraphs.
 - [ ] Quiz mode does not reveal Observation Guide during questions.
 - [ ] Live ECG canvas does not show annotation labels.
 

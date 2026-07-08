@@ -9,6 +9,8 @@
 
 ### Improved
 
+- Simplified Observation Guide cards into compact rhythm-reading checklists.
+- Reduced long explanatory text in learning cards to improve readability on desktop and mobile.
 - Improved readability by reducing the ECG monitor height so learning text and case explanations are easier to view.
 - Kept the live ECG canvas focused on waveform simulation while moving learning guidance into text-based guide cards.
 
