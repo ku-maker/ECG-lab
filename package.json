@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "validate:ecg": "node scripts/validate-ecg-content.mjs"
+    "validate:ecg": "node scripts/validate-ecg-content.mjs",
+    "verify:projection": "node scripts/verify-lead2-projection.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
