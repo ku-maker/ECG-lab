@@ -7,6 +7,7 @@ import {
   GraduationCap,
 } from "lucide-react";
 
+import { ECGLabLogo } from "@/components/ECGLabLogo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { AppMode } from "@/components/appMode";
@@ -32,9 +33,7 @@ export function AppHeader({ appMode, onAppModeChange }: AppHeaderProps) {
   return (
     <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-border bg-card px-4 py-3 md:px-6">
       <div className="flex items-center gap-3">
-        <div className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <Activity className="size-5" aria-hidden />
-        </div>
+        <ECGLabLogo className="size-9" iconClassName="size-5" />
         <div>
           <h1 className="text-base font-semibold tracking-tight md:text-lg">
             ECG Lab

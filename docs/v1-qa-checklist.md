@@ -86,6 +86,13 @@ safe to show as an educational tool.
 - [ ] P wave, QRS, ST segment, T wave, and rest labels appear at plausible points.
 - [ ] The view remains usable at mobile width.
 
+## App Icons / Metadata
+
+- [ ] Browser tab uses the ECG Lab logo favicon.
+- [ ] App metadata uses the ECG Lab title and Japanese description.
+- [ ] Social preview image uses the ECG Lab logo-based thumbnail.
+- [ ] Header logo still displays correctly.
+
 ## Responsive / Basic
 
 - [ ] Desktop layout does not show major overlapping or clipped controls.

@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added ECG Lab logo-based favicon, app icon, and social sharing thumbnail assets.
 - Added text-based Observation Guide cards for ECG rhythm learning in Learning mode.
 - Added rhythm-specific observation points without overlaying labels on the live ECG waveform.
 
