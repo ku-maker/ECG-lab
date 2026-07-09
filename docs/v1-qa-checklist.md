@@ -49,6 +49,8 @@ safe to show as an educational tool.
 
 - [ ] ECG monitor height leaves enough space for case explanations on desktop.
 - [ ] ECG monitor height leaves enough space for learning text on mobile.
+- [ ] ECG monitor height does not dominate the screen on mobile.
+- [ ] Observation Guide is reachable with less scrolling after selecting a case.
 - [ ] Observation Guide and case explanation remain readable without excessive scrolling.
 
 ## Shock / Audio
