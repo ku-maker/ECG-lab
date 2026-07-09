@@ -14,6 +14,7 @@
 - Reduced ECG monitor height slightly to improve access to Observation Guide and case explanations on desktop and mobile.
 - Improved mobile readability by reducing panel headers, horizontal padding, and nested card width constraints in Learning mode.
 - Improved readability by reducing the ECG monitor height so learning text and case explanations are easier to view.
+- Hid the reset control card for fixed-rate, non-shockable cases to reduce unnecessary controls in Learning mode.
 - Kept the live ECG canvas focused on waveform simulation while moving learning guidance into text-based guide cards.
 
 ### Fixed

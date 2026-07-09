@@ -60,9 +60,12 @@ safe to show as an educational tool.
 
 - [ ] VT enables the Shock control.
 - [ ] VF enables the Shock control.
-- [ ] Non-shockable cases show "症例リセット" instead of "除細動".
+- [ ] Non-shockable cases do not show a "除細動" label.
 - [ ] VT/VF still show the SHOCK control and reset option.
 - [ ] Non-shockable cases do not show a SHOCK button.
+- [ ] Fixed-rate, non-shockable cases do not show an unnecessary reset card.
+- [ ] Adjustable-rate cases still provide a way to return BPM and waveform to the initial state.
+- [ ] BPM fixed badges such as "75固定" remain visible where appropriate.
 - [ ] NSR and non-shockable cases do not present a misleading Shock action.
 - [ ] Shock artifact, flatline, and recovery display without obvious visual breaks.
 - [ ] Reset returns the current scenario to a usable initial state.

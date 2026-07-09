@@ -62,13 +62,13 @@ export function ParameterDashboard({
   const lockedBpm = getLockedBpmForTemplateId(selectedCase?.templateId);
   const bpmLocked = lockedBpm !== null;
   const bpmDisabled = bpmUnavailable || bpmLocked;
+  const canAdjustBpm = !bpmUnavailable && !bpmLocked;
   const shockAvailable =
     selectedCase?.templateId === "vt-lead2-v0" ||
     selectedCase?.templateId === "vf-lead2-v0";
+  const shouldShowResetCard = shockAvailable || canAdjustBpm;
   const shockEnabled =
-    !isShockInProgress &&
-    !isShockComplete &&
-    shockAvailable;
+    !isShockInProgress && !isShockComplete && shockAvailable;
   const rhythmLabel = bpmUnavailable
     ? "BPMなし"
     : bpmLocked
@@ -81,7 +81,11 @@ export function ParameterDashboard({
 
   return (
     <div className="grid gap-4 md:grid-cols-3">
-      <ParamCard className="md:col-span-2">
+      <ParamCard
+        className={cn(
+          shouldShowResetCard ? "md:col-span-2" : "md:col-span-3"
+        )}
+      >
         <div className="flex items-start justify-between gap-4">
           <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-rose-500/10 text-rose-500">
             <Activity className="size-5" aria-hidden />
@@ -125,84 +129,84 @@ export function ParameterDashboard({
         </div>
       </ParamCard>
 
-      <ParamCard
-        className={cn(
-          "border-border",
-          shockAvailable && "border-destructive/30 bg-destructive/5",
-          shockEnabled && "shadow-[0_0_0_1px_rgb(239_68_68_/_0.16)]"
-        )}
-      >
-        <div className="flex items-center gap-3">
-          <div
-            className={cn(
-              "flex size-10 shrink-0 items-center justify-center rounded-xl",
-              shockAvailable
-                ? "bg-destructive text-destructive-foreground"
-                : "bg-muted text-muted-foreground"
-            )}
-          >
-            {shockAvailable ? (
-              <Zap className="size-5 fill-current" aria-hidden />
-            ) : (
-              <RotateCcw className="size-5" aria-hidden />
-            )}
-          </div>
-          <div className="min-w-0">
+      {shouldShowResetCard ? (
+        <ParamCard
+          className={cn(
+            "border-border",
+            shockAvailable && "border-destructive/30 bg-destructive/5",
+            shockEnabled && "shadow-[0_0_0_1px_rgb(239_68_68_/_0.16)]"
+          )}
+        >
+          <div className="flex items-center gap-3">
             <div
               className={cn(
-                "text-sm font-semibold",
-                shockAvailable ? "text-destructive" : "text-foreground"
+                "flex size-10 shrink-0 items-center justify-center rounded-xl",
+                shockAvailable
+                  ? "bg-destructive text-destructive-foreground"
+                  : "bg-muted text-muted-foreground"
               )}
             >
-              {shockAvailable ? "除細動" : "症例リセット"}
+              {shockAvailable ? (
+                <Zap className="size-5 fill-current" aria-hidden />
+              ) : (
+                <RotateCcw className="size-5" aria-hidden />
+              )}
             </div>
-            <div className="text-xs text-muted-foreground">
-              {shockAvailable
-                ? "VT / VFのみ除細動可能"
-                : "現在の症例を初期化"}
+            <div className="min-w-0">
+              <div
+                className={cn(
+                  "text-sm font-semibold",
+                  shockAvailable ? "text-destructive" : "text-foreground"
+                )}
+              >
+                {shockAvailable ? "除細動" : "初期値に戻す"}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {shockAvailable
+                  ? "VT / VFのみ除細動可能"
+                  : "BPMと波形を初期状態に戻す"}
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="grid gap-2 sm:grid-cols-2">
-          {shockAvailable ? (
+          <div
+            className={cn("grid gap-2", shockAvailable && "sm:grid-cols-2")}
+          >
+            {shockAvailable ? (
+              <Button
+                type="button"
+                size="lg"
+                disabled={!shockEnabled}
+                onClick={onShock}
+                className="h-12 w-full bg-red-600 text-base font-black tracking-wide text-white shadow-lg shadow-red-500/20 hover:bg-red-700 disabled:shadow-none"
+              >
+                <Zap className="size-5 fill-current" aria-hidden />
+                {isShockInProgress
+                  ? "SHOCK中"
+                  : isShockComplete
+                    ? "SHOCK済み"
+                    : "SHOCK"}
+              </Button>
+            ) : null}
             <Button
               type="button"
               size="lg"
-              disabled={!shockEnabled}
-              onClick={onShock}
-              className="h-12 w-full bg-red-600 text-base font-black tracking-wide text-white shadow-lg shadow-red-500/20 hover:bg-red-700 disabled:shadow-none"
+              variant="outline"
+              onClick={onReset}
+              className="h-12 w-full text-sm font-semibold"
             >
-              <Zap className="size-5 fill-current" aria-hidden />
-              {isShockInProgress
-                ? "SHOCK中"
-                : isShockComplete
-                  ? "SHOCK済み"
-                  : "SHOCK"}
+              <RotateCcw className="size-4" aria-hidden />
+              {shockAvailable ? "症例リセット" : "初期値に戻す"}
             </Button>
-          ) : null}
-          <Button
-            type="button"
-            size="lg"
-            variant="outline"
-            onClick={onReset}
-            className={cn(
-              "h-12 w-full text-sm font-semibold",
-              !shockAvailable && "sm:col-span-2"
-            )}
-          >
-            <RotateCcw className="size-4" aria-hidden />
-            症例リセット
-          </Button>
-        </div>
+          </div>
 
-        <div className="text-xs leading-relaxed text-muted-foreground">
-          {shockAvailable
-            ? "学習用のSHOCK演出後、正常洞調律へ復帰する流れを表示します。"
-            : "現在の症例を初期状態に戻し、波形を描き直します。"}
-        </div>
-      </ParamCard>
-
+          <div className="text-xs leading-relaxed text-muted-foreground">
+            {shockAvailable
+              ? "学習用のSHOCK演出後、正常洞調律へ復帰する流れを表示します。"
+              : "BPMと波形を現在の症例の初期状態に戻します。"}
+          </div>
+        </ParamCard>
+      ) : null}
     </div>
   );
 }
