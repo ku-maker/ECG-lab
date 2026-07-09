@@ -92,6 +92,9 @@ safe to show as an educational tool.
 - [ ] App metadata uses the ECG Lab title and Japanese description.
 - [ ] Social preview image uses the ECG Lab logo-based thumbnail.
 - [ ] Header logo still displays correctly.
+- [ ] OGP thumbnail uses a full dark background without visible white corner margins.
+- [ ] App icons keep a dark background with a simple white ECG waveform.
+- [ ] Header logo still matches the icon style.
 
 ## Responsive / Basic
 

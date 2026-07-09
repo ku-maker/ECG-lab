@@ -1,13 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
   <title id="title">ECG Lab favicon</title>
-  <desc id="desc">Dark rounded square ECG Lab favicon with a white electrocardiogram line.</desc>
-  <rect x="48" y="48" width="416" height="416" rx="96" fill="#020617" />
+  <desc id="desc">Black ECG Lab favicon with a simple white electrocardiogram waveform.</desc>
+  <rect x="0" y="0" width="512" height="512" fill="#0b0b0b" />
   <path
-    d="M112 268H184L214 210L258 334L306 154L348 268H400"
+    d="M92 268H178L212 204L258 340L306 150L350 268H420"
     fill="none"
     stroke="#ffffff"
     stroke-linecap="round"
     stroke-linejoin="round"
-    stroke-width="34"
+    stroke-width="38"
   />
 </svg>

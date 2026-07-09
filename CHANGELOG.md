@@ -17,6 +17,7 @@
 - Hid the reset control card for fixed-rate, non-shockable cases to reduce unnecessary controls in Learning mode.
 - Kept the live ECG canvas focused on waveform simulation while moving learning guidance into text-based guide cards.
 - Polished README wording for the v1.4 release-prep state while keeping the released app version unchanged.
+- Simplified logo-based metadata assets to use a cleaner black-background ECG thumbnail style without unwanted white margins.
 
 ### Fixed
 

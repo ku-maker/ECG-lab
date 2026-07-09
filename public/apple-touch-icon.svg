@@ -1,22 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
   <title id="title">ECG Lab apple touch icon</title>
-  <desc id="desc">Dark rounded square ECG Lab touch icon with a white electrocardiogram line.</desc>
-  <defs>
-    <linearGradient id="touch-bg" x1="64" y1="56" x2="448" y2="456" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#111827" />
-      <stop offset="0.58" stop-color="#020617" />
-      <stop offset="1" stop-color="#020617" />
-    </linearGradient>
-  </defs>
-  <rect width="512" height="512" rx="112" fill="url(#touch-bg)" />
+  <desc id="desc">Black ECG Lab touch icon with a simple white electrocardiogram waveform.</desc>
+  <rect x="0" y="0" width="512" height="512" fill="#0b0b0b" />
   <path
-    d="M104 270H184L216 210L258 334L306 154L350 270H408"
+    d="M92 268H178L212 204L258 340L306 150L350 268H420"
     fill="none"
     stroke="#ffffff"
     stroke-linecap="round"
     stroke-linejoin="round"
     stroke-width="34"
   />
-  <circle cx="104" cy="270" r="12" fill="#22d3ee" opacity="0.68" />
-  <circle cx="408" cy="270" r="12" fill="#22d3ee" opacity="0.68" />
 </svg>
