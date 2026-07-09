@@ -141,7 +141,11 @@ export function ParameterDashboard({
                 : "bg-muted text-muted-foreground"
             )}
           >
-            <Zap className="size-5 fill-current" aria-hidden />
+            {shockAvailable ? (
+              <Zap className="size-5 fill-current" aria-hidden />
+            ) : (
+              <RotateCcw className="size-5" aria-hidden />
+            )}
           </div>
           <div className="min-w-0">
             <div
@@ -150,7 +154,7 @@ export function ParameterDashboard({
                 shockAvailable ? "text-destructive" : "text-foreground"
               )}
             >
-              除細動
+              {shockAvailable ? "除細動" : "症例リセット"}
             </div>
             <div className="text-xs text-muted-foreground">
               {shockAvailable
@@ -194,8 +198,8 @@ export function ParameterDashboard({
 
         <div className="text-xs leading-relaxed text-muted-foreground">
           {shockAvailable
-            ? "通電後、電気的飽和とフラットラインを地続きに流し、正常洞調律へ復帰します。"
-            : "現在の疾患プリセットの初期BPMで、波形をクリアして描き直します。"}
+            ? "学習用のSHOCK演出後、正常洞調律へ復帰する流れを表示します。"
+            : "現在の症例を初期状態に戻し、波形を描き直します。"}
         </div>
       </ParamCard>
 

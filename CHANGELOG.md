@@ -18,6 +18,7 @@
 
 ### Fixed
 
+- Clarified reset/shock controls so non-shockable cases show a case reset card instead of a defibrillation label.
 - Disabled the experimental ECG waveform annotation overlay because label positions were not reliable enough for ECG learning use.
 - Removed inaccurate annotation controls from Learning and Compare views.
 - Removed static waveform diagrams after visual review showed they could still be misleading.
