@@ -52,6 +52,9 @@ safe to show as an educational tool.
 - [ ] ECG monitor height does not dominate the screen on mobile.
 - [ ] Observation Guide is reachable with less scrolling after selecting a case.
 - [ ] Observation Guide and case explanation remain readable without excessive scrolling.
+- [ ] Mobile Learning view does not show an unnecessary parameter-control heading.
+- [ ] Case explanation text uses most of the available mobile width.
+- [ ] Observation Guide remains readable on narrow screens without excessive line breaks.
 
 ## Shock / Audio
 

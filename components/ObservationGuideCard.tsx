@@ -128,7 +128,7 @@ function getObservationGuide(ecgCase: ECGCase): ObservationGuideContent {
         title: "Atrial flutter",
         items: [
           item("Baseline", "F波様の鋸歯状", "key"),
-          item("RR", "伝導比により規則的なことが多い", "key"),
+          item("RR", "伝導比で規則的", "key"),
           item("P", "明瞭な洞性P波ではない"),
           item("QRS", "多くは狭い"),
           item("Pitfall", "AFより規則性が目立つことがある", "pitfall"),
@@ -249,7 +249,7 @@ export function ObservationGuideCard({ ecgCase }: ObservationGuideCardProps) {
   const guide = getObservationGuide(ecgCase);
 
   return (
-    <section className="space-y-3 rounded-xl border border-border bg-background/70 p-3 shadow-sm md:p-4">
+    <section className="space-y-3 rounded-xl border border-border bg-background/70 p-2.5 shadow-sm md:p-4">
       <div className="flex items-start gap-3">
         <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-500">
           <Eye className="size-4" aria-hidden />
@@ -277,7 +277,7 @@ export function ObservationGuideCard({ ecgCase }: ObservationGuideCardProps) {
           >
             <span
               className={cn(
-                "mt-0.5 min-w-14 shrink-0 rounded-full px-2 py-0.5 text-center text-[11px] font-semibold leading-tight",
+                "mt-0.5 min-w-12 shrink-0 rounded-full px-2 py-0.5 text-center text-[11px] font-semibold leading-tight md:min-w-14",
                 badgeToneClass[guideItem.tone]
               )}
             >

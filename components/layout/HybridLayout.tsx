@@ -116,22 +116,24 @@ export function HybridLayout({
         </div>
       </section>
 
-      {/* 下部: コントロールパネル領域 (残りの高さをすべて割り当て、内部のみスクロール) */}
+      {/* 下部: 学習パネル領域 (残りの高さをすべて割り当て、内部のみスクロール) */}
       <section
-        aria-label="パラメータコントロール"
+        aria-label="学習パネル"
         className="flex min-h-0 flex-1 flex-col bg-background"
       >
-        <div className="flex shrink-0 items-center gap-2 border-b border-border px-4 py-3 md:px-6">
+        <div className="hidden shrink-0 items-center gap-2 border-b border-border px-4 py-3 md:flex md:px-6">
           <SlidersHorizontal
             className="size-4 text-muted-foreground"
             aria-hidden
           />
           <h2 className="text-sm font-semibold md:text-base">
-            パラメータコントロール
+            学習パネル
           </h2>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-6 md:px-8 md:py-8">{dashboard}</div>
+        <div className="flex-1 overflow-y-auto px-2.5 py-4 md:px-8 md:py-8">
+          {dashboard}
+        </div>
       </section>
     </div>
   );

@@ -107,7 +107,7 @@ export function CaseExplanationCard({
   return (
     <div
       className={cn(
-        "flex gap-4 rounded-2xl border px-5 py-4 shadow-lg transition-all duration-500",
+        "rounded-2xl border px-3 py-3 shadow-lg transition-all duration-500 md:flex md:gap-4 md:px-5 md:py-4",
         config.containerClass,
         config.glowClass
       )}
@@ -117,7 +117,7 @@ export function CaseExplanationCard({
       {/* アイコン */}
       <div
         className={cn(
-          "flex size-10 shrink-0 items-center justify-center rounded-xl",
+          "hidden size-10 shrink-0 items-center justify-center rounded-xl md:flex",
           config.iconClass
         )}
       >
@@ -127,6 +127,14 @@ export function CaseExplanationCard({
       {/* テキスト */}
       <div className="min-w-0 flex-1">
         <div className="mb-1.5 flex flex-wrap items-center gap-2">
+          <span
+            className={cn(
+              "flex size-7 shrink-0 items-center justify-center rounded-lg md:hidden",
+              config.iconClass
+            )}
+          >
+            <Icon className="size-4" aria-hidden />
+          </span>
           <h3 className="text-sm font-bold tracking-tight md:text-base">
             {selectedCase.label}
           </h3>
@@ -147,20 +155,20 @@ export function CaseExplanationCard({
             {config.label}
           </span>
         </div>
-        <div className="space-y-5">
+        <div className="space-y-4 md:space-y-5">
           <section className="space-y-2">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-foreground/80">
               <BookOpen className="size-3.5 text-muted-foreground" aria-hidden />
               Overview
             </div>
-            <p className="text-sm leading-relaxed text-muted-foreground">
+            <p className="text-sm leading-6 text-muted-foreground md:leading-relaxed">
               {selectedCase.description}
             </p>
           </section>
 
           <ObservationGuideCard ecgCase={selectedCase} />
 
-          <div className="grid gap-5 lg:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-2 lg:gap-5">
             <EducationSection
               title="Key findings"
               icon={ListChecks}
