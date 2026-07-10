@@ -17,6 +17,11 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
+// T4 統合：インライン双極子モデルを廃し、本番の evaluateDipole（T4）＋
+// buildNsrTimeline（T3）を使う。これが「T4 が T5 の検証済みモデルと数値一致する」証明。
+import { evaluateDipole } from "../src/data/ecg/activation/evaluate.ts";
+import { buildNsrTimeline } from "../src/data/ecg/activation/buildTimeline.ts";
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const nsr = JSON.parse(
   readFileSync(
@@ -45,42 +50,11 @@ function leadAxis(id) {
 // ---- 賦活タイムライン（NSR）: fiducials から導出、数値ハードコードしない ----
 const F = nsr.fiducialsMs;
 const CYCLE = nsr.durationMs;
-// 双極子の代表方向は「平均電気軸 ≒ +60°(Lead II 方向)」。心房/心室/再分極とも concordant。
-// dir は明示ベクトルとして与える（注入バグは誘導軸側のみに効かせ、射影の非対称性を検出させる）。
-const DIR_60 = (() => {
-  const r = (60 * Math.PI) / 180;
-  return [Math.cos(r), -Math.sin(r), 0]; // 正しいフレームでの +60°
-})();
-
-// event: center(ms), sigma(ms), peakMag, dir
-// QRS は単一Gaussianではなく、双極子の向きが回ることで生じる生理的 biphasic を
-// 中隔Q(小・逆向き)→主R(大・+60°)→終末S(小・逆向き) の3ローブで表現する。
-// （負の peak = DIR_60 の逆向き寄与。MVPの「単一方向イベント」より一段リッチだが、
-//   双極子ベクトルが QRS 中に回転する設計の範囲内。）
-const EVENTS = [
-  { name: "atrial", center: F.pPeak, sigma: (F.pOff - F.pOn) / 2.4, peak: 0.13, dir: DIR_60 },
-  { name: "septalQ", center: F.q, sigma: 10, peak: -0.18, dir: DIR_60 },
-  { name: "mainR", center: F.r, sigma: (F.qrsOff - F.qrsOn) / 5.5, peak: 1.0, dir: DIR_60 },
-  { name: "terminalS", center: F.s, sigma: 12, peak: -0.22, dir: DIR_60 },
-  { name: "repol", center: F.tPeak, sigma: (F.tEnd - F.qrsOff) / 5.0, peak: 0.30, dir: DIR_60 },
-];
-
-function gauss(t, c, s) {
-  const z = (t - c) / s;
-  return Math.exp(-0.5 * z * z);
-}
-function evaluateDipole(tMs) {
-  const v = [0, 0, 0];
-  for (const e of EVENTS) {
-    const m = e.peak * gauss(tMs, e.center, e.sigma);
-    v[0] += e.dir[0] * m;
-    v[1] += e.dir[1] * m;
-    v[2] += e.dir[2] * m;
-  }
-  return v;
-}
-function dot(a, b) {
-  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+// 双極子は T3 の NSR タイムライン＋T4 の evaluateDipole で合成する（インライン廃止）。
+const timeline = buildNsrTimeline(nsr.id, F, CYCLE);
+const dipoleOut = { x: 0, y: 0, z: 0 };
+function dot(v, a) {
+  return v.x * a[0] + v.y * a[1] + v.z * a[2];
 }
 
 // ---- サンプリング --------------------------------------------------------
@@ -103,7 +77,7 @@ for (let k = 0; k < N; k++) {
   const ms = (k / (N - 1)) * CYCLE;
   times.push(ms);
   ref.push(sampleTemplateAtMs(ms));
-  proj.push(dot(evaluateDipole(ms), II));
+  proj.push(dot(evaluateDipole(timeline, ms, dipoleOut), II));
 }
 
 // ---- Z-score 正規化 ------------------------------------------------------
