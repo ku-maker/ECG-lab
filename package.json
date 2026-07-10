@@ -15,6 +15,7 @@
     "verify:leadcamera": "node scripts/verify-lead-camera.mjs",
     "verify:leadproj": "node scripts/verify-lead-projection-all.mjs",
     "verify:clockint": "node scripts/verify-clock-integration.mjs",
+    "verify:all": "npm run verify:leadaxes && npm run verify:activation && npm run verify:evaluate && npm run verify:projection && npm run verify:clock && npm run verify:leadcamera && npm run verify:leadproj && npm run verify:clockint",
     "verify:projection": "node scripts/verify-lead2-projection.mjs"
   },
   "dependencies": {
