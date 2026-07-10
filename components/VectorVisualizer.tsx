@@ -16,6 +16,10 @@ import {
 import type { ConductionSegmentId } from "@/src/data/ecg/activation/types";
 import { LEADS, type LeadId } from "@/src/data/ecg/leads/leadAxes";
 import { leadCameraPosition } from "@/src/data/ecg/leads/leadCamera";
+import {
+  projectLeadValue,
+  sampleLeadCycle,
+} from "@/src/data/ecg/leads/projectLead";
 import nsrTemplate from "@/src/data/ecg/templates/nsr-lead2.json";
 
 const GRAPH_WIDTH = 900;
@@ -84,60 +88,27 @@ function sliderValue(values: number | readonly number[]): number {
   return values[0] ?? 0;
 }
 
-function catmullRom(p0: number, p1: number, p2: number, p3: number, t: number) {
-  const t2 = t * t;
-  const t3 = t2 * t;
+const GRAPH_SAMPLE_COUNT = 240;
 
-  return (
-    0.5 *
-    (2 * p1 +
-      (-p0 + p2) * t +
-      (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 +
-      (-p0 + 3 * p1 - 3 * p2 + p3) * t3)
-  );
+// SVG viewBox 内に y をクランプ（極端振幅の見切れ防止。共通スケールでは通常発動しない）。
+function clampGraphY(y: number): number {
+  return clamp(y, 0, GRAPH_HEIGHT);
 }
 
-function getNsrValueAtMs(ms: number): number {
-  const samples = nsrTemplate.samplesMv;
-  const durationMs = nsrTemplate.durationMs;
-  const position = clamp(ms / durationMs, 0, 1) * (samples.length - 1);
-  const index = Math.floor(position);
-  const localT = position - index;
-  const sampleAt = (sampleIndex: number) =>
-    samples[clamp(sampleIndex, 0, samples.length - 1)] ?? 0;
+// 選択誘導の投影波形（leadValue = evaluateDipole · leadAxis）を SVG パスにする。
+// 全誘導共通の固定 mV スケール（GRAPH_MV_SCALE）を用い、誘導ごと正規化はしない
+// （誘導間の相対的な大小・極性を保つため）。
+function buildLeadPath(id: LeadId): string {
+  const samples = sampleLeadCycle(nsrTimeline, id, GRAPH_SAMPLE_COUNT);
 
-  return catmullRom(
-    sampleAt(index - 1),
-    sampleAt(index),
-    sampleAt(index + 1),
-    sampleAt(index + 2),
-    localT
-  );
-}
-
-function ecgPointAt(progressRatio: number) {
-  const ratio = clamp(progressRatio, 0, 1);
-  const ms = ratio * nsrTemplate.durationMs;
-  const mv = getNsrValueAtMs(ms);
-
-  return {
-    x: GRAPH_PADDING_X + ratio * PLOT_WIDTH,
-    y: GRAPH_BASELINE_Y - mv * GRAPH_MV_SCALE,
-    mv,
-    ms,
-  };
-}
-
-function buildNsrPath(): string {
-  const pointCount = 420;
-
-  return Array.from({ length: pointCount + 1 }, (_, index) => {
-    const ratio = index / pointCount;
-    const point = ecgPointAt(ratio);
-    const command = index === 0 ? "M" : "L";
-
-    return `${command} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`;
-  }).join(" ");
+  return samples
+    .map((sample, index) => {
+      const ratio = sample.tMs / nsrTimeline.cycleMs;
+      const x = GRAPH_PADDING_X + ratio * PLOT_WIDTH;
+      const y = clampGraphY(GRAPH_BASELINE_Y - sample.mv * GRAPH_MV_SCALE);
+      return `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
+    })
+    .join(" ");
 }
 
 function toVector3(point: VectorPoint): THREE.Vector3 {
@@ -559,12 +530,24 @@ function HeartVectorScene({
   );
 }
 
-function EcgRevealGraph({ progress }: { progress: number }) {
+function EcgRevealGraph({
+  progress,
+  selectedLead,
+}: {
+  progress: number;
+  selectedLead: LeadId;
+}) {
   const clipId = useId();
-  const wavePath = useMemo(() => buildNsrPath(), []);
+  // 波形パスは選択誘導が変わった時のみ再生成（毎フレームではない）。
+  const wavePath = useMemo(() => buildLeadPath(selectedLead), [selectedLead]);
   const progressRatio = clamp(progress / 100, 0, 1);
   const clipWidth = GRAPH_PADDING_X + PLOT_WIDTH * progressRatio;
-  const currentPoint = ecgPointAt(progressRatio);
+  const phaseMs = progressRatio * nsrTimeline.cycleMs;
+  const currentMv = projectLeadValue(nsrTimeline, selectedLead, phaseMs);
+  const currentPoint = {
+    x: GRAPH_PADDING_X + progressRatio * PLOT_WIDTH,
+    y: clampGraphY(GRAPH_BASELINE_Y - currentMv * GRAPH_MV_SCALE),
+  };
   const phase = getEcgPhaseLabel(progress);
 
   return (
@@ -572,10 +555,10 @@ function EcgRevealGraph({ progress }: { progress: number }) {
       <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-3 text-emerald-300">
         <div>
           <div className="text-xs font-semibold uppercase tracking-wider text-emerald-400/70">
-            Lead II
+            Lead {selectedLead}
           </div>
           <h2 className="text-sm font-semibold md:text-base">
-            NSR 2D waveform
+            NSR projected waveform
           </h2>
         </div>
         <div className="rounded-md border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 font-mono text-xs">
@@ -680,7 +663,9 @@ function EcgRevealGraph({ progress }: { progress: number }) {
 export function VectorVisualizer() {
   const [progress, setProgress] = useState(0);
   const [selectedLead, setSelectedLead] = useState<LeadId>("II");
-  const currentPoint = ecgPointAt(progress / 100);
+  // 選択誘導の現在位相における投影値（下部の ms/mV 読み出し用）。
+  const phaseMs = (progress / 100) * nsrTimeline.cycleMs;
+  const currentMv = projectLeadValue(nsrTimeline, selectedLead, phaseMs);
 
   return (
     <main className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
@@ -707,7 +692,7 @@ export function VectorVisualizer() {
         </section>
 
         <section aria-label="2D心電図波形" className="flex min-h-0">
-          <EcgRevealGraph progress={progress} />
+          <EcgRevealGraph progress={progress} selectedLead={selectedLead} />
         </section>
       </div>
 
@@ -757,12 +742,12 @@ export function VectorVisualizer() {
             <div>
               <h2 className="text-sm font-semibold">Conduction progress</h2>
               <p className="font-mono text-xs text-muted-foreground">
-                {Math.round(progress)}% / {Math.round(currentPoint.ms)}ms /{" "}
-                {currentPoint.mv.toFixed(3)}mV
+                {Math.round(progress)}% / {Math.round(phaseMs)}ms /{" "}
+                {currentMv.toFixed(3)}mV
               </p>
             </div>
             <div className="rounded-md border border-border bg-muted px-3 py-1 font-mono text-xs">
-              NSR Lead II
+              NSR Lead {selectedLead}
             </div>
           </div>
           <Slider
