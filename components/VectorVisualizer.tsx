@@ -6,8 +6,16 @@ import { useId, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
 import { Slider } from "@/components/ui/slider";
-import { clamp, easeInOutCubic, easeOutCubic } from "@/lib/ecg/easing";
+import { clamp } from "@/lib/ecg/easing";
+import { evaluateSegments } from "@/src/data/ecg/activation/evaluate";
+import { nsrTimeline } from "@/src/data/ecg/activation/nsr";
+import {
+  CONDUCTION_POINTS,
+  SEGMENT_POINTS,
+} from "@/src/data/ecg/activation/segmentPoints";
+import type { ConductionSegmentId } from "@/src/data/ecg/activation/types";
 import { LEADS, type LeadId } from "@/src/data/ecg/leads/leadAxes";
+import { leadCameraPosition } from "@/src/data/ecg/leads/leadCamera";
 import nsrTemplate from "@/src/data/ecg/templates/nsr-lead2.json";
 
 const GRAPH_WIDTH = 900;
@@ -20,80 +28,10 @@ const PLOT_WIDTH = GRAPH_WIDTH - GRAPH_PADDING_X * 2;
 type VectorPoint = [number, number, number];
 type PulseDirection = "forward" | "reverse";
 
-type PulseState = {
-  active: boolean;
-  value: number;
-  color: string;
-  direction: PulseDirection;
-};
-
 const SCENE_TARGET: VectorPoint = [-0.08, -0.28, 0.02];
 
-const LEAD_CAMERA_POSITIONS: Record<LeadId, VectorPoint> = {
-  I: [-3.9, 0.05, 3.9],
-  II: [0.05, -4.35, 4.55],
-  III: [3.0, -3.45, 3.9],
-  aVR: [4.1, 1.05, 3.45],
-  aVL: [-4.0, 1.05, 3.45],
-  aVF: [0.05, -4.7, 3.85],
-  V1: [3.35, -0.02, 4.65],
-  V2: [2.35, -0.04, 5.0],
-  V3: [1.1, -0.08, 5.22],
-  V4: [-0.25, -0.08, 5.22],
-  V5: [-2.45, -0.06, 4.55],
-  V6: [-4.4, -0.02, 2.85],
-};
-
-const CONDUCTION_POINTS = {
-  sa: [-0.62, 0.88, -0.28],
-  internodal: [-0.42, 0.42, -0.22],
-  av: [-0.16, 0.02, -0.14],
-  his: [-0.07, -0.2, -0.05],
-  rbbMid: [-0.32, -0.66, 0.1],
-  rbbEnd: [-0.5, -1.08, 0.24],
-  lbbTrunk: [0.06, -0.38, -0.02],
-  lafMid: [0.36, -0.74, 0.08],
-  lafEnd: [0.62, -1.04, 0.14],
-  lpfMid: [0.12, -0.94, -0.2],
-  lpfEnd: [0.26, -1.24, -0.22],
-  septalApex: [-0.34, -1.22, 0.04],
-  purkinjeApex: [-0.76, -1.54, 0.16],
-} satisfies Record<string, VectorPoint>;
-
-const CONDUCTION_PATHS = {
-  internodalTract: [
-    CONDUCTION_POINTS.sa,
-    CONDUCTION_POINTS.internodal,
-    CONDUCTION_POINTS.av,
-  ],
-  avHisBundle: [
-    CONDUCTION_POINTS.av,
-    CONDUCTION_POINTS.his,
-  ],
-  rightBundleBranch: [
-    CONDUCTION_POINTS.his,
-    CONDUCTION_POINTS.rbbMid,
-    CONDUCTION_POINTS.rbbEnd,
-  ],
-  leftAnteriorFascicle: [
-    CONDUCTION_POINTS.his,
-    CONDUCTION_POINTS.lbbTrunk,
-    CONDUCTION_POINTS.lafMid,
-    CONDUCTION_POINTS.lafEnd,
-  ],
-  leftPosteriorFascicle: [
-    CONDUCTION_POINTS.his,
-    CONDUCTION_POINTS.lbbTrunk,
-    CONDUCTION_POINTS.lpfMid,
-    CONDUCTION_POINTS.lpfEnd,
-  ],
-  septalPurkinje: [
-    CONDUCTION_POINTS.his,
-    CONDUCTION_POINTS.lbbTrunk,
-    CONDUCTION_POINTS.septalApex,
-    CONDUCTION_POINTS.purkinjeApex,
-  ],
-} satisfies Record<string, VectorPoint[]>;
+// カメラ位置は leadCameraPosition（T2 の leadAxis 由来）で算出する。
+// 伝導路の3D点列は SEGMENT_POINTS / CONDUCTION_POINTS（segmentPoints.ts）から import。
 
 const ECG_TIMELINE_MS = {
   cycleStart: 0,
@@ -113,6 +51,33 @@ const CONDUCTION_COLORS = {
   septal: "#c4b5fd",
   recovery: "#67e8f9",
 } as const;
+
+// 各セグメントの発光ウィンドウ [center-2σ, center+2σ]（伝導パルスの走行位置算出用）。
+// nsrTimeline のイベントから一度だけ構築する。
+type SegmentWindow = { start: number; end: number };
+const SEGMENT_WINDOWS: Partial<Record<ConductionSegmentId, SegmentWindow>> =
+  (() => {
+    const windows: Partial<Record<ConductionSegmentId, SegmentWindow>> = {};
+    for (const event of nsrTimeline.events) {
+      const start = event.centerMs - 2 * event.sigmaMs;
+      const end = event.centerMs + 2 * event.sigmaMs;
+      const existing = windows[event.segment];
+      windows[event.segment] = existing
+        ? { start: Math.min(existing.start, start), end: Math.max(existing.end, end) }
+        : { start, end };
+    }
+    return windows;
+  })();
+
+// phaseMs におけるセグメント内ローカル進行度 0..1（パルスの走行位置）。
+function segmentLocalProgress(
+  segment: ConductionSegmentId,
+  phaseMs: number
+): number {
+  const window = SEGMENT_WINDOWS[segment];
+  if (!window || window.end <= window.start) return 0;
+  return clamp((phaseMs - window.start) / (window.end - window.start), 0, 1);
+}
 
 function sliderValue(values: number | readonly number[]): number {
   if (typeof values === "number") return values;
@@ -181,104 +146,6 @@ function toVector3(point: VectorPoint): THREE.Vector3 {
 
 function progressToTemplateMs(progress: number): number {
   return (clamp(progress, 0, 100) / 100) * nsrTemplate.durationMs;
-}
-
-function progressBetween(ms: number, start: number, end: number): number {
-  if (end <= start) return 0;
-
-  return clamp(THREE.MathUtils.mapLinear(ms, start, end, 0, 1), 0, 1);
-}
-
-function createPulseState(
-  active: boolean,
-  value: number,
-  color: string,
-  direction: PulseDirection = "forward"
-): PulseState {
-  return {
-    active,
-    value: clamp(value, 0, 1),
-    color,
-    direction,
-  };
-}
-
-function getConductionTimeline(progress: number) {
-  const currentMs = progressToTemplateMs(progress);
-  const isAtrial =
-    currentMs >= ECG_TIMELINE_MS.pOn && currentMs < ECG_TIMELINE_MS.pOff;
-  const isAvDelay =
-    currentMs >= ECG_TIMELINE_MS.pOff &&
-    currentMs < ECG_TIMELINE_MS.qrsOn;
-  const isQrs =
-    currentMs >= ECG_TIMELINE_MS.qrsOn &&
-    currentMs < ECG_TIMELINE_MS.qrsOff;
-  const isStSegment =
-    currentMs >= ECG_TIMELINE_MS.qrsOff &&
-    currentMs < ECG_TIMELINE_MS.tPeak;
-  const isRepolarizing =
-    currentMs >= ECG_TIMELINE_MS.tPeak &&
-    currentMs < ECG_TIMELINE_MS.tEnd;
-
-  const atrialValue = easeInOutCubic(
-    progressBetween(currentMs, ECG_TIMELINE_MS.pOn, ECG_TIMELINE_MS.pOff)
-  );
-  const prValue = progressBetween(
-    currentMs,
-    ECG_TIMELINE_MS.pOff,
-    ECG_TIMELINE_MS.qrsOn
-  );
-  const avHisValue =
-    prValue < 0.68
-      ? easeOutCubic(prValue / 0.68) * 0.18
-      : THREE.MathUtils.mapLinear(prValue, 0.68, 1, 0.18, 1);
-  const qrsValue = easeOutCubic(
-    progressBetween(currentMs, ECG_TIMELINE_MS.qrsOn, ECG_TIMELINE_MS.qrsOff)
-  );
-  const tWaveValue = easeInOutCubic(
-    progressBetween(currentMs, ECG_TIMELINE_MS.tPeak, ECG_TIMELINE_MS.tEnd)
-  );
-  const terminalHold = isStSegment;
-  const recoveryValue = 1 - tWaveValue;
-
-  return {
-    atrial: createPulseState(
-      isAtrial,
-      atrialValue,
-      CONDUCTION_COLORS.atrial
-    ),
-    avHis: createPulseState(
-      isAvDelay,
-      avHisValue,
-      CONDUCTION_COLORS.avDelay
-    ),
-    ventricularFast: createPulseState(
-      isQrs,
-      qrsValue,
-      CONDUCTION_COLORS.ventricular
-    ),
-    septalFast: createPulseState(
-      isQrs,
-      qrsValue,
-      CONDUCTION_COLORS.septal
-    ),
-    terminalHold: createPulseState(
-      terminalHold,
-      1,
-      CONDUCTION_COLORS.ventricular
-    ),
-    repolarization: createPulseState(
-      isRepolarizing,
-      recoveryValue,
-      CONDUCTION_COLORS.recovery,
-      "reverse"
-    ),
-    terminalGlowActive: terminalHold || isRepolarizing,
-    terminalGlowColor: isRepolarizing
-      ? CONDUCTION_COLORS.recovery
-      : CONDUCTION_COLORS.ventricular,
-    terminalGlowIntensity: terminalHold ? 1 : 0.72,
-  };
 }
 
 function getEcgPhaseLabel(progress: number): string {
@@ -489,8 +356,10 @@ function TerminalGlow({
 
 function LeadCameraController({ selectedLead }: { selectedLead: LeadId }) {
   const { camera } = useThree();
+  // カメラ位置は leadCameraPosition（leadAxis 由来）で算出。目分量の
+  // LEAD_CAMERA_POSITIONS は廃止し、投影軸とカメラを同一ソースに統一する。
   const targetPosition = useMemo(
-    () => new THREE.Vector3(...LEAD_CAMERA_POSITIONS[selectedLead]),
+    () => new THREE.Vector3(...leadCameraPosition(selectedLead, SCENE_TARGET)),
     [selectedLead]
   );
   const lookAtTarget = useMemo(() => new THREE.Vector3(...SCENE_TARGET), []);
@@ -559,17 +428,37 @@ function HeartVectorScene({
   progress: number;
   selectedLead: LeadId;
 }) {
-  const timeline = getConductionTimeline(progress);
-  const ventricularPulse = timeline.repolarization.active
-    ? timeline.repolarization
-    : timeline.terminalHold.active
-      ? timeline.terminalHold
-      : timeline.ventricularFast;
-  const septalPulse = timeline.repolarization.active
-    ? timeline.repolarization
-    : timeline.terminalHold.active
-      ? timeline.terminalHold
-      : timeline.septalFast;
+  // 暫定 phaseMs ブリッジ：T7 時点ではクロック（T6）未配線のため progress(0–100) を
+  // phaseMs に変換して使う。T9 で useCardiacClock の phaseMs に置換する。
+  // TODO(T9): この暫定ブリッジを撤去し、単一クロックの phaseMs を購読する。
+  const phaseMs = (clamp(progress, 0, 100) / 100) * nsrTimeline.cycleMs;
+  const segments = evaluateSegments(nsrTimeline, phaseMs);
+
+  const qrsGlow = segments.septalPurkinje;
+  const repolGlow = segments.ventRepol;
+  // T波（ventRepol）が優勢な間は心室系を recovery 色で逆向きに流す。
+  const isRepol = repolGlow > 0.02 && repolGlow >= qrsGlow;
+
+  // 心室系パスウェイ（RBB/LAF/LPF/septalPurkinje）は QRS 窓（septalPurkinje）に
+  // 同期して発光する（His/脚は固有イベントを持たないため）。
+  const ventProgress = segmentLocalProgress(
+    isRepol ? "ventRepol" : "septalPurkinje",
+    phaseMs
+  );
+  const ventActive = isRepol ? repolGlow > 0.02 : qrsGlow > 0.02;
+  const ventColor = isRepol
+    ? CONDUCTION_COLORS.recovery
+    : CONDUCTION_COLORS.ventricular;
+  const septalColor = isRepol
+    ? CONDUCTION_COLORS.recovery
+    : CONDUCTION_COLORS.septal;
+  const ventDirection: PulseDirection = isRepol ? "reverse" : "forward";
+
+  const glowActive = qrsGlow > 0.02 || repolGlow > 0.02;
+  const glowColor = isRepol
+    ? CONDUCTION_COLORS.recovery
+    : CONDUCTION_COLORS.ventricular;
+  const glowIntensity = Math.max(qrsGlow, repolGlow);
 
   return (
     <Canvas
@@ -586,57 +475,55 @@ function HeartVectorScene({
       <AnatomicalBoundingHeart />
 
       <ConductionPathway
-        points={CONDUCTION_PATHS.internodalTract}
-        color={timeline.atrial.color}
-        pulseProgress={timeline.atrial.value}
-        active={timeline.atrial.active}
-        direction={timeline.atrial.direction}
+        points={SEGMENT_POINTS.saAtrial}
+        color={CONDUCTION_COLORS.atrial}
+        pulseProgress={segmentLocalProgress("saAtrial", phaseMs)}
+        active={segments.saAtrial > 0.02}
         radius={0.016}
       />
       <ConductionPathway
-        points={CONDUCTION_PATHS.avHisBundle}
-        color={timeline.avHis.color}
-        pulseProgress={timeline.avHis.value}
-        active={timeline.avHis.active}
-        direction={timeline.avHis.direction}
+        points={SEGMENT_POINTS.avDelay}
+        color={CONDUCTION_COLORS.avDelay}
+        pulseProgress={segmentLocalProgress("avDelay", phaseMs)}
+        active={segments.avDelay > 0.02}
         radius={0.018}
       />
       <ConductionPathway
-        points={CONDUCTION_PATHS.rightBundleBranch}
-        color={ventricularPulse.color}
-        pulseProgress={ventricularPulse.value}
-        active={ventricularPulse.active}
-        direction={ventricularPulse.direction}
+        points={SEGMENT_POINTS.rightBundle}
+        color={ventColor}
+        pulseProgress={ventProgress}
+        active={ventActive}
+        direction={ventDirection}
         radius={0.018}
       />
       <ConductionPathway
-        points={CONDUCTION_PATHS.leftAnteriorFascicle}
-        color={ventricularPulse.color}
-        pulseProgress={ventricularPulse.value}
-        active={ventricularPulse.active}
-        direction={ventricularPulse.direction}
+        points={SEGMENT_POINTS.leftAnterior}
+        color={ventColor}
+        pulseProgress={ventProgress}
+        active={ventActive}
+        direction={ventDirection}
         radius={0.019}
       />
       <ConductionPathway
-        points={CONDUCTION_PATHS.leftPosteriorFascicle}
-        color={ventricularPulse.color}
-        pulseProgress={ventricularPulse.value}
-        active={ventricularPulse.active}
-        direction={ventricularPulse.direction}
+        points={SEGMENT_POINTS.leftPosterior}
+        color={ventColor}
+        pulseProgress={ventProgress}
+        active={ventActive}
+        direction={ventDirection}
         radius={0.019}
       />
       <ConductionPathway
-        points={CONDUCTION_PATHS.septalPurkinje}
-        color={septalPulse.color}
-        pulseProgress={septalPulse.value}
-        active={septalPulse.active}
-        direction={septalPulse.direction}
+        points={SEGMENT_POINTS.septalPurkinje}
+        color={septalColor}
+        pulseProgress={ventProgress}
+        active={ventActive}
+        direction={ventDirection}
         radius={0.015}
       />
       <TerminalGlow
-        active={timeline.terminalGlowActive}
-        color={timeline.terminalGlowColor}
-        intensity={timeline.terminalGlowIntensity}
+        active={glowActive}
+        color={glowColor}
+        intensity={glowIntensity}
       />
 
       <NodeMarker

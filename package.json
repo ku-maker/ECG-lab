@@ -12,6 +12,7 @@
     "verify:activation": "node scripts/verify-activation-nsr.mjs",
     "verify:evaluate": "node scripts/verify-evaluate.mjs",
     "verify:clock": "node scripts/verify-cardiac-clock.mjs",
+    "verify:leadcamera": "node scripts/verify-lead-camera.mjs",
     "verify:projection": "node scripts/verify-lead2-projection.mjs"
   },
   "dependencies": {
