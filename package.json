@@ -11,6 +11,7 @@
     "verify:leadaxes": "node scripts/verify-lead-axes.mjs",
     "verify:activation": "node scripts/verify-activation-nsr.mjs",
     "verify:evaluate": "node scripts/verify-evaluate.mjs",
+    "verify:clock": "node scripts/verify-cardiac-clock.mjs",
     "verify:projection": "node scripts/verify-lead2-projection.mjs"
   },
   "dependencies": {
