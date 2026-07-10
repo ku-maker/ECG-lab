@@ -17,3 +17,14 @@ specs and success criteria should be written:
 - Flag any task where automated verification isn't feasible — these need
   extra scrutiny before being marked complete, since there's no human
   safety net catching subtle bugs.
+
+## Reporting completion accurately
+
+"完了しました" / "実装しました" must not be reported until BOTH of the
+following are true: (1) the file exists on disk, AND (2) it has been
+committed and confirmed pushed (local/remote hash match verified via
+git status). A file existing on disk is not "done" — it is only "done"
+once git log and git status confirm it. This was violated once (T1 was
+reported complete while still untracked, caught only during T2's
+git status check) — treat that incident as the standard this rule exists
+to prevent.
