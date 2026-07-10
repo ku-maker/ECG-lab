@@ -6,6 +6,8 @@ import { useId, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
 import { Slider } from "@/components/ui/slider";
+import { clamp, easeInOutCubic, easeOutCubic } from "@/lib/ecg/easing";
+import { LEADS, type LeadId } from "@/src/data/ecg/leads/leadAxes";
 import nsrTemplate from "@/src/data/ecg/templates/nsr-lead2.json";
 
 const GRAPH_WIDTH = 900;
@@ -24,35 +26,6 @@ type PulseState = {
   color: string;
   direction: PulseDirection;
 };
-
-type LeadId =
-  | "I"
-  | "II"
-  | "III"
-  | "aVR"
-  | "aVL"
-  | "aVF"
-  | "V1"
-  | "V2"
-  | "V3"
-  | "V4"
-  | "V5"
-  | "V6";
-
-const LEADS: LeadId[] = [
-  "I",
-  "II",
-  "III",
-  "aVR",
-  "aVL",
-  "aVF",
-  "V1",
-  "V2",
-  "V3",
-  "V4",
-  "V5",
-  "V6",
-];
 
 const SCENE_TARGET: VectorPoint = [-0.08, -0.28, 0.02];
 
@@ -141,10 +114,6 @@ const CONDUCTION_COLORS = {
   recovery: "#67e8f9",
 } as const;
 
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
-
 function sliderValue(values: number | readonly number[]): number {
   if (typeof values === "number") return values;
   return values[0] ?? 0;
@@ -208,18 +177,6 @@ function buildNsrPath(): string {
 
 function toVector3(point: VectorPoint): THREE.Vector3 {
   return new THREE.Vector3(...point);
-}
-
-function easeInOutCubic(value: number): number {
-  const t = clamp(value, 0, 1);
-
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-}
-
-function easeOutCubic(value: number): number {
-  const t = clamp(value, 0, 1);
-
-  return 1 - Math.pow(1 - t, 3);
 }
 
 function progressToTemplateMs(progress: number): number {
