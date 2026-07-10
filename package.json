@@ -9,6 +9,7 @@
     "lint": "eslint",
     "validate:ecg": "node scripts/validate-ecg-content.mjs",
     "verify:leadaxes": "node scripts/verify-lead-axes.mjs",
+    "verify:activation": "node scripts/verify-activation-nsr.mjs",
     "verify:projection": "node scripts/verify-lead2-projection.mjs"
   },
   "dependencies": {
