@@ -7,6 +7,7 @@ import * as THREE from "three";
 
 import { Slider } from "@/components/ui/slider";
 import { clamp } from "@/lib/ecg/easing";
+import { useCardiacClock } from "@/lib/ecg/useCardiacClock";
 import { evaluateSegments } from "@/src/data/ecg/activation/evaluate";
 import { nsrTimeline } from "@/src/data/ecg/activation/nsr";
 import {
@@ -115,12 +116,8 @@ function toVector3(point: VectorPoint): THREE.Vector3 {
   return new THREE.Vector3(...point);
 }
 
-function progressToTemplateMs(progress: number): number {
-  return (clamp(progress, 0, 100) / 100) * nsrTemplate.durationMs;
-}
-
-function getEcgPhaseLabel(progress: number): string {
-  const currentMs = progressToTemplateMs(progress);
+function getEcgPhaseLabel(phaseMs: number): string {
+  const currentMs = phaseMs;
 
   if (
     currentMs >= ECG_TIMELINE_MS.pOn &&
@@ -393,16 +390,12 @@ function AnatomicalBoundingHeart() {
 }
 
 function HeartVectorScene({
-  progress,
+  phaseMs,
   selectedLead,
 }: {
-  progress: number;
+  phaseMs: number;
   selectedLead: LeadId;
 }) {
-  // 暫定 phaseMs ブリッジ：T7 時点ではクロック（T6）未配線のため progress(0–100) を
-  // phaseMs に変換して使う。T9 で useCardiacClock の phaseMs に置換する。
-  // TODO(T9): この暫定ブリッジを撤去し、単一クロックの phaseMs を購読する。
-  const phaseMs = (clamp(progress, 0, 100) / 100) * nsrTimeline.cycleMs;
   const segments = evaluateSegments(nsrTimeline, phaseMs);
 
   const qrsGlow = segments.septalPurkinje;
@@ -531,24 +524,26 @@ function HeartVectorScene({
 }
 
 function EcgRevealGraph({
-  progress,
+  phaseMs,
+  cycleMs,
   selectedLead,
 }: {
-  progress: number;
+  phaseMs: number;
+  cycleMs: number;
   selectedLead: LeadId;
 }) {
   const clipId = useId();
   // 波形パスは選択誘導が変わった時のみ再生成（毎フレームではない）。
   const wavePath = useMemo(() => buildLeadPath(selectedLead), [selectedLead]);
-  const progressRatio = clamp(progress / 100, 0, 1);
+  const progressRatio = clamp(cycleMs > 0 ? phaseMs / cycleMs : 0, 0, 1);
   const clipWidth = GRAPH_PADDING_X + PLOT_WIDTH * progressRatio;
-  const phaseMs = progressRatio * nsrTimeline.cycleMs;
+  // カーソル用の1回だけの投影（レンダ経路。毎フレームの useFrame 経路ではない）。
   const currentMv = projectLeadValue(nsrTimeline, selectedLead, phaseMs);
   const currentPoint = {
     x: GRAPH_PADDING_X + progressRatio * PLOT_WIDTH,
     y: clampGraphY(GRAPH_BASELINE_Y - currentMv * GRAPH_MV_SCALE),
   };
-  const phase = getEcgPhaseLabel(progress);
+  const phase = getEcgPhaseLabel(phaseMs);
 
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col bg-[#08111f]">
@@ -660,12 +655,18 @@ function EcgRevealGraph({
   );
 }
 
+const NSR_BPM = 60_000 / nsrTimeline.cycleMs;
+
 export function VectorVisualizer() {
-  const [progress, setProgress] = useState(0);
+  // 単一の心周期クロック（single source of truth）。3D・波形・カーソル・reveal・
+  // スライダー・読み出しは全てこの phaseMs を購読する。
+  const { phaseMs, cycleMs: clockCycleMs, mode, play, pause, scrubTo } =
+    useCardiacClock({ bpm: NSR_BPM, cycleMs: nsrTimeline.cycleMs, autoPlay: false });
   const [selectedLead, setSelectedLead] = useState<LeadId>("II");
-  // 選択誘導の現在位相における投影値（下部の ms/mV 読み出し用）。
-  const phaseMs = (progress / 100) * nsrTimeline.cycleMs;
+  // 選択誘導の現在位相における投影値（下部の ms/mV 読み出し用。レンダ経路の1回計算）。
   const currentMv = projectLeadValue(nsrTimeline, selectedLead, phaseMs);
+  const sliderPercent = clockCycleMs > 0 ? (phaseMs / clockCycleMs) * 100 : 0;
+  const isPlaying = mode === "playing";
 
   return (
     <main className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
@@ -674,7 +675,7 @@ export function VectorVisualizer() {
           aria-label="刺激伝導マップ"
           className="relative min-h-0 overflow-hidden border-b border-border bg-[#071018] lg:border-r lg:border-b-0"
         >
-          <HeartVectorScene progress={progress} selectedLead={selectedLead} />
+          <HeartVectorScene phaseMs={phaseMs} selectedLead={selectedLead} />
           <div className="pointer-events-none absolute top-4 left-4 text-cyan-100">
             <div className="text-xs font-semibold uppercase tracking-wider text-cyan-200/70">
               Conduction Map
@@ -692,7 +693,11 @@ export function VectorVisualizer() {
         </section>
 
         <section aria-label="2D心電図波形" className="flex min-h-0">
-          <EcgRevealGraph progress={progress} selectedLead={selectedLead} />
+          <EcgRevealGraph
+            phaseMs={phaseMs}
+            cycleMs={clockCycleMs}
+            selectedLead={selectedLead}
+          />
         </section>
       </div>
 
@@ -735,28 +740,38 @@ export function VectorVisualizer() {
               })}
             </div>
             <p className="text-xs text-muted-foreground">
-              ※ 現段階では12誘導波形ではなく、誘導方向を模した視点切り替えです。
+              ※ 波形は各誘導への簡略化した双極子投影です（胸部誘導 V1–V6 は近似）。厳密な12誘導心電図を再現するものではありません。
             </p>
           </div>
           <div className="flex items-center justify-between gap-4">
             <div>
               <h2 className="text-sm font-semibold">Conduction progress</h2>
               <p className="font-mono text-xs text-muted-foreground">
-                {Math.round(progress)}% / {Math.round(phaseMs)}ms /{" "}
+                {Math.round(sliderPercent)}% / {Math.round(phaseMs)}ms /{" "}
                 {currentMv.toFixed(3)}mV
               </p>
             </div>
-            <div className="rounded-md border border-border bg-muted px-3 py-1 font-mono text-xs">
-              NSR Lead {selectedLead}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => (isPlaying ? pause() : play())}
+                aria-pressed={isPlaying}
+                className="h-8 rounded-md border border-border bg-background px-3 font-mono text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+              >
+                {isPlaying ? "Pause" : "Play"}
+              </button>
+              <div className="rounded-md border border-border bg-muted px-3 py-1 font-mono text-xs">
+                NSR Lead {selectedLead}
+              </div>
             </div>
           </div>
           <Slider
             min={0}
             max={100}
             step={0.5}
-            value={[progress]}
-            onValueChange={(value) => setProgress(sliderValue(value))}
-            aria-label="刺激伝導マップとLead II波形の同期進行度"
+            value={[sliderPercent]}
+            onValueChange={(value) => scrubTo(sliderValue(value) / 100)}
+            aria-label="刺激伝導マップと選択誘導波形の同期進行度"
           />
         </div>
       </section>

@@ -14,6 +14,7 @@
     "verify:clock": "node scripts/verify-cardiac-clock.mjs",
     "verify:leadcamera": "node scripts/verify-lead-camera.mjs",
     "verify:leadproj": "node scripts/verify-lead-projection-all.mjs",
+    "verify:clockint": "node scripts/verify-clock-integration.mjs",
     "verify:projection": "node scripts/verify-lead2-projection.mjs"
   },
   "dependencies": {
