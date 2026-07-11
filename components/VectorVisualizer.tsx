@@ -2,7 +2,7 @@
 
 import { Line, OrbitControls, Text } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
 import { Slider } from "@/components/ui/slider";
@@ -16,6 +16,12 @@ import {
 } from "@/src/data/ecg/activation/segmentPoints";
 import type { ConductionSegmentId } from "@/src/data/ecg/activation/types";
 import { resolveVentricularGlow } from "@/src/data/ecg/activation/ventricularGlow";
+import {
+  GRAPH_BASELINE_Y,
+  GRAPH_HEIGHT,
+  GRAPH_SAMPLE_COUNT,
+  computeGraphMvScale,
+} from "@/src/data/ecg/leads/graphScale";
 import { LEADS, type LeadId } from "@/src/data/ecg/leads/leadAxes";
 import { leadCameraPosition } from "@/src/data/ecg/leads/leadCamera";
 import {
@@ -25,11 +31,10 @@ import {
 import nsrTemplate from "@/src/data/ecg/templates/nsr-lead2.json";
 
 const GRAPH_WIDTH = 900;
-const GRAPH_HEIGHT = 360;
 const GRAPH_PADDING_X = 36;
-const GRAPH_BASELINE_Y = 205;
-const GRAPH_MV_SCALE = 128;
 const PLOT_WIDTH = GRAPH_WIDTH - GRAPH_PADDING_X * 2;
+// 縦スケールは全12誘導の全体最大振幅から導出（どの誘導でも枠内に収める）。module ロード時に一度算出。
+const GRAPH_MV_SCALE = computeGraphMvScale(nsrTimeline, LEADS);
 
 type VectorPoint = [number, number, number];
 
@@ -89,11 +94,24 @@ function sliderValue(values: number | readonly number[]): number {
   return values[0] ?? 0;
 }
 
-const GRAPH_SAMPLE_COUNT = 240;
-
-// SVG viewBox 内に y をクランプ（極端振幅の見切れ防止。共通スケールでは通常発動しない）。
+// SVG viewBox 内に y をクランプ（保険。データ駆動スケールでは正常時に発動しない）。
 function clampGraphY(y: number): number {
   return clamp(y, 0, GRAPH_HEIGHT);
+}
+
+// モバイル幅（<768px）判定。3Dラベルの出し分けに使う。SSR/初期は false（ラベル表示）。
+function useIsMobile(): boolean {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 767px)");
+    const update = () => setIsMobile(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+
+  return isMobile;
 }
 
 // 選択誘導の投影波形（leadValue = evaluateDipole · leadAxis）を SVG パスにする。
@@ -255,11 +273,13 @@ function NodeMarker({
   position,
   label,
   color,
+  showLabel = true,
   labelOffset = [0.18, 0.12, 0.02],
 }: {
   position: VectorPoint;
   label: string;
   color: string;
+  showLabel?: boolean;
   labelOffset?: VectorPoint;
 }) {
   return (
@@ -272,17 +292,19 @@ function NodeMarker({
         <sphereGeometry args={[0.06, 24, 24]} />
         <meshBasicMaterial color={color} opacity={0.16} transparent />
       </mesh>
-      <Text
-        anchorX="left"
-        anchorY="middle"
-        color="#e0f2fe"
-        fontSize={0.055}
-        outlineColor="#020617"
-        outlineWidth={0.006}
-        position={labelOffset}
-      >
-        {label}
-      </Text>
+      {showLabel ? (
+        <Text
+          anchorX="left"
+          anchorY="middle"
+          color="#e0f2fe"
+          fontSize={0.038}
+          outlineColor="#020617"
+          outlineWidth={0.006}
+          position={labelOffset}
+        >
+          {label}
+        </Text>
+      ) : null}
     </group>
   );
 }
@@ -345,7 +367,7 @@ function LeadCameraController({ selectedLead }: { selectedLead: LeadId }) {
   return null;
 }
 
-function AnatomicalBoundingHeart() {
+function AnatomicalBoundingHeart({ showLabel = true }: { showLabel?: boolean }) {
   return (
     <group>
       <mesh
@@ -375,21 +397,23 @@ function AnatomicalBoundingHeart() {
         transparent
         opacity={0.22}
       />
-      <Text
-        anchorX="center"
-        anchorY="middle"
-        color="#cbd5e1"
-        fontSize={0.052}
-        outlineColor="#020617"
-        outlineWidth={0.006}
-        position={[
-          CONDUCTION_POINTS.purkinjeApex[0],
-          CONDUCTION_POINTS.purkinjeApex[1] - 0.14,
-          CONDUCTION_POINTS.purkinjeApex[2],
-        ]}
-      >
-        Apex
-      </Text>
+      {showLabel ? (
+        <Text
+          anchorX="center"
+          anchorY="middle"
+          color="#cbd5e1"
+          fontSize={0.038}
+          outlineColor="#020617"
+          outlineWidth={0.006}
+          position={[
+            CONDUCTION_POINTS.purkinjeApex[0],
+            CONDUCTION_POINTS.purkinjeApex[1] - 0.14,
+            CONDUCTION_POINTS.purkinjeApex[2],
+          ]}
+        >
+          Apex
+        </Text>
+      ) : null}
     </group>
   );
 }
@@ -397,9 +421,11 @@ function AnatomicalBoundingHeart() {
 function HeartVectorScene({
   phaseMs,
   selectedLead,
+  showLabels,
 }: {
   phaseMs: number;
   selectedLead: LeadId;
+  showLabels: boolean;
 }) {
   const segments = evaluateSegments(nsrTimeline, phaseMs);
 
@@ -438,7 +464,7 @@ function HeartVectorScene({
       <pointLight position={[-2, -1, 2.2]} intensity={2.2} color="#fb7185" />
 
       <LeadCameraController selectedLead={selectedLead} />
-      <AnatomicalBoundingHeart />
+      <AnatomicalBoundingHeart showLabel={showLabels} />
 
       <ConductionPathway
         points={SEGMENT_POINTS.saAtrial}
@@ -500,18 +526,21 @@ function HeartVectorScene({
         position={CONDUCTION_POINTS.sa}
         label="SA Node"
         color="#67e8f9"
+        showLabel={showLabels}
         labelOffset={[0.2, 0.11, 0.02]}
       />
       <NodeMarker
         position={CONDUCTION_POINTS.av}
         label="AV Node"
         color="#a7f3d0"
+        showLabel={showLabels}
         labelOffset={[0.18, 0.08, 0.02]}
       />
       <NodeMarker
         position={CONDUCTION_POINTS.his}
         label="Bundle of His"
         color="#f0abfc"
+        showLabel={showLabels}
         labelOffset={[0.18, -0.02, 0.02]}
       />
 
@@ -570,7 +599,7 @@ function EcgRevealGraph({
       <div className="min-h-0 flex-1 px-3 py-4 md:px-5">
         <svg
           aria-label="同期して描画される正常洞調律の心電図波形"
-          className="h-full min-h-[220px] w-full"
+          className="block h-full w-full"
           viewBox={`0 0 ${GRAPH_WIDTH} ${GRAPH_HEIGHT}`}
           preserveAspectRatio="none"
           role="img"
@@ -669,6 +698,8 @@ export function VectorVisualizer() {
   const { phaseMs, cycleMs: clockCycleMs, mode, play, pause, scrubTo } =
     useCardiacClock({ bpm: NSR_BPM, cycleMs: nsrTimeline.cycleMs, autoPlay: false });
   const [selectedLead, setSelectedLead] = useState<LeadId>("II");
+  // モバイルでは3Dラベルを隠して心臓本体の視認性を優先（ノードの球は残す）。
+  const isMobile = useIsMobile();
   // 選択誘導の現在位相における投影値（下部の ms/mV 読み出し用。レンダ経路の1回計算）。
   const currentMv = projectLeadValue(nsrTimeline, selectedLead, phaseMs);
   const sliderPercent = clockCycleMs > 0 ? (phaseMs / clockCycleMs) * 100 : 0;
@@ -676,12 +707,16 @@ export function VectorVisualizer() {
 
   return (
     <main className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
-      <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_minmax(0,0.95fr)] lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:grid-rows-1">
+      <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:grid-rows-1">
         <section
           aria-label="刺激伝導マップ"
           className="relative min-h-0 overflow-hidden border-b border-border bg-[#071018] lg:border-r lg:border-b-0"
         >
-          <HeartVectorScene phaseMs={phaseMs} selectedLead={selectedLead} />
+          <HeartVectorScene
+            phaseMs={phaseMs}
+            selectedLead={selectedLead}
+            showLabels={!isMobile}
+          />
           <div className="pointer-events-none absolute top-4 left-4 text-cyan-100">
             <div className="text-xs font-semibold uppercase tracking-wider text-cyan-200/70">
               Conduction Map
