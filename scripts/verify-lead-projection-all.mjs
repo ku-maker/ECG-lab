@@ -84,11 +84,19 @@ const rOf = (id) => projectLeadValue(timeline, id, F.r, dip);
 check("aVR R deflection negative", rOf("aVR") < 0, `aVR=${rOf("aVR").toFixed(3)}`);
 check("II/I/aVF R deflection positive", rOf("II") > 0 && rOf("I") > 0 && rOf("aVF") > 0, `II=${rOf("II").toFixed(2)} I=${rOf("I").toFixed(2)} aVF=${rOf("aVF").toFixed(2)}`);
 check("II P wave positive", projectLeadValue(timeline, "II", F.pPeak, dip) > 0, `IIp=${projectLeadValue(timeline, "II", F.pPeak, dip).toFixed(3)}`);
-// aVL は符号断定せず near-isoelectric（小ささ）で検証（+60° 軸と 90° 直交・意図的）。
+// aVL の QRS は near-isoelectric（QRS は +60° 固定で aVL(-30°)と直交・意図的）。
 check(
   "aVL R near-isoelectric (|aVL| <= 0.5*|II|)",
   Math.abs(rOf("aVL")) <= 0.5 * Math.abs(rOf("II")),
   `|aVL|=${Math.abs(rOf("aVL")).toFixed(3)} 0.5|II|=${(0.5 * Math.abs(rOf("II"))).toFixed(3)}`
+);
+// aVL の P波・T波は非ゼロ（P/T 軸を QRS から微小に振ったため。完全フラット解消）。
+const aVLp = projectLeadValue(timeline, "aVL", F.pPeak, dip);
+const aVLt = projectLeadValue(timeline, "aVL", F.tPeak, dip);
+check(
+  "aVL P & T non-zero (not flat)",
+  Math.abs(aVLp) > 0.02 && Math.abs(aVLt) > 0.02,
+  `aVL P=${aVLp.toFixed(4)} T=${aVLt.toFixed(4)}`
 );
 
 // 4. 振幅の相対関係

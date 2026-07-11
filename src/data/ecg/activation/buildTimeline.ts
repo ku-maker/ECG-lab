@@ -9,10 +9,22 @@ import type {
   ActivationTimeline,
 } from "./types";
 
-// 平均電気軸（+60°）方向。T2 の axisFromAngle(60) = [cos60, -sin60, 0]。
-// 既に単位長（norm=1）。全イベントでこの向きに統一し、biphasic の前後振れは
-// dipolePeakMag の符号のみで表す（T5 ハーネスと同方式・§Notes 参照）。
+// 双極子の向き（T2 の axisFromAngle(deg) = [cos, -sin, 0]、単位長）。
+function dirFromDeg(deg: number): [number, number, number] {
+  const rad = (deg * Math.PI) / 180;
+  return [Math.cos(rad), -Math.sin(rad), 0];
+}
+
+// QRS（septalQ/mainR/terminalS）は平均電気軸 +60° に固定。biphasic の前後振れは
+// dipolePeakMag の符号のみで表す（T5 ハーネスと同方式）。※ QRS の向きは変更禁止（T5 ゲート）。
 const DIR_60: [number, number, number] = [0.5, -0.8660254037844386, 0];
+
+// P波・T波は QRS(+60°)から少しだけ振る。正常心でも P軸・QRS軸・T軸は完全一致せず、aVL(-30°)が
+// +60° と直交して周期を通しフラットになるのを避けるための微小 tilt。詳細と再検証見込みは
+// docs/tasks/avl-pt-axis-tilt.md 参照。QRS-T angle = 10°（正常範囲）。この tilt により aVL の
+// P・T に小さな非ゼロの振れが出る（実測 P≈0.034 / T≈0.052、QRS は near-iso のまま）。
+const DIR_P_45: [number, number, number] = dirFromDeg(45); // P波軸 +45°
+const DIR_T_50: [number, number, number] = dirFromDeg(50); // T波軸 +50°
 
 export type NsrFiducials = {
   pOn: number;
@@ -78,7 +90,7 @@ export function buildNsrTimeline(
       segment: "saAtrial",
       centerMs: pPeak,
       sigmaMs: (pOff - pOn) / 2.4,
-      dipoleDir: DIR_60,
+      dipoleDir: DIR_P_45, // P波軸 +45°（aVL を非ゼロ化。QRS とは別軸）
       dipolePeakMag: 0.13,
       contributesToWave: true,
     },
@@ -123,12 +135,12 @@ export function buildNsrTimeline(
       contributesToWave: true,
     },
     {
-      // 心室再分極（T）：QRS と同極性（concordant）。
+      // 心室再分極（T）：QRS と概ね同極性（concordant）だが軸はわずかに分離（+50°）。
       id: "repol",
       segment: "ventRepol",
       centerMs: tPeak,
       sigmaMs: (tEnd - qrsOff) / 5.0,
-      dipoleDir: DIR_60,
+      dipoleDir: DIR_T_50, // T波軸 +50°（QRS-T angle 10°。aVL を非ゼロ化）
       dipolePeakMag: 0.3,
       contributesToWave: true,
     },
