@@ -15,6 +15,7 @@ import {
   SEGMENT_POINTS,
 } from "@/src/data/ecg/activation/segmentPoints";
 import type { ConductionSegmentId } from "@/src/data/ecg/activation/types";
+import { resolveVentricularGlow } from "@/src/data/ecg/activation/ventricularGlow";
 import { LEADS, type LeadId } from "@/src/data/ecg/leads/leadAxes";
 import { leadCameraPosition } from "@/src/data/ecg/leads/leadCamera";
 import {
@@ -31,7 +32,6 @@ const GRAPH_MV_SCALE = 128;
 const PLOT_WIDTH = GRAPH_WIDTH - GRAPH_PADDING_X * 2;
 
 type VectorPoint = [number, number, number];
-type PulseDirection = "forward" | "reverse";
 
 const SCENE_TARGET: VectorPoint = [-0.08, -0.28, 0.02];
 
@@ -164,21 +164,23 @@ const conductionVertexShader = `
 const conductionFragmentShader = `
   uniform float uProgress;
   uniform float uActive;
-  uniform float uReverse;
+  uniform float uUniform; // 1 = 方向なし均一グロー（再分極）、0 = 前進パルス（脱分極）
+  uniform float uGlow;    // 均一グロー時の明るさ 0..1（ventRepol 包絡）
   uniform vec3 uColor;
   varying vec2 vUv;
 
   void main() {
     vec3 baseColor = vec3(0.10, 0.14, 0.15);
     float baseAlpha = 0.24;
+    // 脱分極：位置 uProgress を先頭に前進する光（後方テール）。
     float distanceToPulse = abs(vUv.x - uProgress);
     float pulse = smoothstep(0.075, 0.0, distanceToPulse);
-    float forwardTailDiff = uProgress - vUv.x;
-    float reverseTailDiff = vUv.x - uProgress;
-    float tailDiff = mix(forwardTailDiff, reverseTailDiff, uReverse);
+    float tailDiff = uProgress - vUv.x; // 常に後方（前進）テール。逆走は廃止。
     float tailMask = step(0.0, tailDiff);
     float tail = smoothstep(0.34, 0.0, tailDiff) * tailMask;
-    float intensity = (pulse + tail * 0.55) * uActive;
+    float pulseIntensity = (pulse + tail * 0.55) * uActive;
+    // 再分極：チューブ全体が方向を持たず均一に光る（uGlow で明滅）。
+    float intensity = mix(pulseIntensity, uGlow, uUniform);
     vec3 finalColor = mix(baseColor, uColor, intensity);
     float finalAlpha = max(baseAlpha, intensity);
 
@@ -191,14 +193,16 @@ function ConductionPathway({
   color,
   pulseProgress,
   active,
-  direction = "forward",
+  glowMode = "pulse",
+  glow = 0,
   radius = 0.018,
 }: {
   points: VectorPoint[];
   color: string;
   pulseProgress: number;
   active: boolean;
-  direction?: PulseDirection;
+  glowMode?: "pulse" | "uniform";
+  glow?: number;
   radius?: number;
 }) {
   const materialRef = useRef<THREE.ShaderMaterial | null>(null);
@@ -216,7 +220,8 @@ function ConductionPathway({
     () => ({
       uProgress: { value: 0 },
       uActive: { value: 0 },
-      uReverse: { value: 0 },
+      uUniform: { value: 0 },
+      uGlow: { value: 0 },
       uColor: { value: new THREE.Color(color) },
     }),
     [color]
@@ -226,8 +231,8 @@ function ConductionPathway({
     if (!materialRef.current) return;
     materialRef.current.uniforms.uProgress.value = clamp(pulseProgress, 0, 1);
     materialRef.current.uniforms.uActive.value = active ? 1 : 0;
-    materialRef.current.uniforms.uReverse.value =
-      direction === "reverse" ? 1 : 0;
+    materialRef.current.uniforms.uUniform.value = glowMode === "uniform" ? 1 : 0;
+    materialRef.current.uniforms.uGlow.value = active ? clamp(glow, 0, 1) : 0;
     materialRef.current.uniforms.uColor.value.set(color);
   });
 
@@ -400,23 +405,20 @@ function HeartVectorScene({
 
   const qrsGlow = segments.septalPurkinje;
   const repolGlow = segments.ventRepol;
-  // T波（ventRepol）が優勢な間は心室系を recovery 色で逆向きに流す。
-  const isRepol = repolGlow > 0.02 && repolGlow >= qrsGlow;
+  // 心室系の発光スタイル（純関数）。再分極は方向なし均一グロー（逆走なし）。
+  const vent = resolveVentricularGlow(segments);
+  const isRepol = vent.phase === "repol";
 
-  // 心室系パスウェイ（RBB/LAF/LPF/septalPurkinje）は QRS 窓（septalPurkinje）に
-  // 同期して発光する（His/脚は固有イベントを持たないため）。
-  const ventProgress = segmentLocalProgress(
-    isRepol ? "ventRepol" : "septalPurkinje",
-    phaseMs
-  );
-  const ventActive = isRepol ? repolGlow > 0.02 : qrsGlow > 0.02;
-  const ventColor = isRepol
-    ? CONDUCTION_COLORS.recovery
-    : CONDUCTION_COLORS.ventricular;
-  const septalColor = isRepol
-    ? CONDUCTION_COLORS.recovery
-    : CONDUCTION_COLORS.septal;
-  const ventDirection: PulseDirection = isRepol ? "reverse" : "forward";
+  // 心室系パスウェイ（RBB/LAF/LPF/septalPurkinje）。脱分極時のみ前進パルスを掃引し、
+  // 再分極時は均一グロー（掃引しない）。His/脚は固有イベントを持たないため QRS 窓に同期。
+  const ventProgress = isRepol
+    ? 0
+    : segmentLocalProgress("septalPurkinje", phaseMs);
+  const ventActive = vent.active;
+  const ventGlowMode = vent.mode;
+  const ventGlow = vent.intensity; // 再分極: ventRepol 包絡（1心拍1回の穏やかな明滅）
+  const ventColor = CONDUCTION_COLORS[vent.ventColorKey];
+  const septalColor = CONDUCTION_COLORS[vent.septalColorKey];
 
   const glowActive = qrsGlow > 0.02 || repolGlow > 0.02;
   const glowColor = isRepol
@@ -457,7 +459,8 @@ function HeartVectorScene({
         color={ventColor}
         pulseProgress={ventProgress}
         active={ventActive}
-        direction={ventDirection}
+        glowMode={ventGlowMode}
+        glow={ventGlow}
         radius={0.018}
       />
       <ConductionPathway
@@ -465,7 +468,8 @@ function HeartVectorScene({
         color={ventColor}
         pulseProgress={ventProgress}
         active={ventActive}
-        direction={ventDirection}
+        glowMode={ventGlowMode}
+        glow={ventGlow}
         radius={0.019}
       />
       <ConductionPathway
@@ -473,7 +477,8 @@ function HeartVectorScene({
         color={ventColor}
         pulseProgress={ventProgress}
         active={ventActive}
-        direction={ventDirection}
+        glowMode={ventGlowMode}
+        glow={ventGlow}
         radius={0.019}
       />
       <ConductionPathway
@@ -481,7 +486,8 @@ function HeartVectorScene({
         color={septalColor}
         pulseProgress={ventProgress}
         active={ventActive}
-        direction={ventDirection}
+        glowMode={ventGlowMode}
+        glow={ventGlow}
         radius={0.015}
       />
       <TerminalGlow
