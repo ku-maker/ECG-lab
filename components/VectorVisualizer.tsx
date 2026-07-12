@@ -367,15 +367,33 @@ function LeadCameraController({ selectedLead }: { selectedLead: LeadId }) {
   return null;
 }
 
+// 心臓の側面シルエット（回転体プロファイル）。x=半径, y=高さ(-1=apex 下端 → +1=心基部 上端)。
+// 上端は丸く閉じ、上〜中段で心室が膨らみ、下端は心尖(apex)へ1点に収束する対称テーパー形状。
+// Y 軸まわりに latheGeometry で回して心臓らしい外形にする（LV/RV 非対称は今回入れない）。
+const HEART_PROFILE: THREE.Vector2[] = [
+  new THREE.Vector2(0.001, -1.0), // 心尖 apex（先端・ほぼ点）
+  new THREE.Vector2(0.14, -0.9),
+  new THREE.Vector2(0.34, -0.72),
+  new THREE.Vector2(0.55, -0.5),
+  new THREE.Vector2(0.75, -0.26),
+  new THREE.Vector2(0.92, 0.0),
+  new THREE.Vector2(1.0, 0.22), // 最大幅（上〜中段の心室膨らみ）
+  new THREE.Vector2(0.98, 0.42),
+  new THREE.Vector2(0.86, 0.62),
+  new THREE.Vector2(0.66, 0.8),
+  new THREE.Vector2(0.4, 0.93),
+  new THREE.Vector2(0.001, 1.0), // 心基部 上端（丸く閉じる）
+];
+
 function AnatomicalBoundingHeart({ showLabel = true }: { showLabel?: boolean }) {
   return (
     <group>
       <mesh
         position={SCENE_TARGET}
         rotation={[0.12, 0.24, -0.24]}
-        scale={[1.32, 1.72, 0.82]}
+        scale={[1.4, 1.3, 0.85]}
       >
-        <sphereGeometry args={[1, 64, 32]} />
+        <latheGeometry args={[HEART_PROFILE, 48]} />
         <meshStandardMaterial
           color="#7f1d1d"
           emissive="#450a0a"
