@@ -458,7 +458,7 @@ function HeartVectorScene({
       dpr={[1, 2]}
       gl={{ antialias: true }}
     >
-      <color attach="background" args={["#071018"]} />
+      <color attach="background" args={["#0f172a"]} />
       <ambientLight intensity={0.72} />
       <pointLight position={[2, 2.4, 3]} intensity={5.2} color="#67e8f9" />
       <pointLight position={[-2, -1, 2.2]} intensity={2.2} color="#fb7185" />
@@ -544,10 +544,6 @@ function HeartVectorScene({
         labelOffset={[0.18, -0.02, 0.02]}
       />
 
-      <gridHelper
-        args={[3.4, 12, "#155e75", "#0f172a"]}
-        position={[SCENE_TARGET[0], -1.62, SCENE_TARGET[2]]}
-      />
       <OrbitControls
         enablePan={false}
         minDistance={3.2}
@@ -710,7 +706,7 @@ export function VectorVisualizer() {
       <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:grid-rows-1">
         <section
           aria-label="刺激伝導マップ"
-          className="relative min-h-0 overflow-hidden border-b border-border bg-[#071018] lg:border-r lg:border-b-0"
+          className="relative min-h-0 overflow-hidden border-b border-border bg-[#0f172a] lg:border-r lg:border-b-0"
         >
           <HeartVectorScene
             phaseMs={phaseMs}
