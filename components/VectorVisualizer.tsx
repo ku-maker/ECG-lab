@@ -188,8 +188,8 @@ const conductionFragmentShader = `
   varying vec2 vUv;
 
   void main() {
-    vec3 baseColor = vec3(0.10, 0.14, 0.15);
-    float baseAlpha = 0.24;
+    vec3 baseColor = vec3(0.20, 0.26, 0.28);
+    float baseAlpha = 0.40;
     // 脱分極：位置 uProgress を先頭に前進する光（後方テール）。
     float distanceToPulse = abs(vUv.x - uProgress);
     float pulse = smoothstep(0.075, 0.0, distanceToPulse);
@@ -379,8 +379,8 @@ function AnatomicalBoundingHeart({ showLabel = true }: { showLabel?: boolean }) 
         <meshStandardMaterial
           color="#7f1d1d"
           emissive="#450a0a"
-          emissiveIntensity={0.08}
-          opacity={0.2}
+          emissiveIntensity={0.2}
+          opacity={0.38}
           transparent
           wireframe
         />
@@ -395,7 +395,7 @@ function AnatomicalBoundingHeart({ showLabel = true }: { showLabel?: boolean }) 
         color="#e2e8f0"
         lineWidth={1.2}
         transparent
-        opacity={0.22}
+        opacity={0.42}
       />
       {showLabel ? (
         <Text
@@ -459,7 +459,7 @@ function HeartVectorScene({
       gl={{ antialias: true }}
     >
       <color attach="background" args={["#0f172a"]} />
-      <ambientLight intensity={0.72} />
+      <ambientLight intensity={0.9} />
       <pointLight position={[2, 2.4, 3]} intensity={5.2} color="#67e8f9" />
       <pointLight position={[-2, -1, 2.2]} intensity={2.2} color="#fb7185" />
 
@@ -720,7 +720,7 @@ export function VectorVisualizer() {
             </div>
             <h2 className="text-sm font-semibold">刺激伝導マップ</h2>
           </div>
-          <div className="pointer-events-none absolute top-3 right-4 inline-flex rounded border border-cyan-300/15 bg-cyan-300/5 px-1.5 py-0.5 font-mono text-[10px] text-cyan-100/75">
+          <div className="pointer-events-none absolute top-3 right-4 font-mono text-[10px] text-cyan-100/60">
             View angle: Lead {selectedLead}-like
           </div>
           <p className="pointer-events-none absolute bottom-2 left-4 right-4 text-[10px] leading-snug text-cyan-100/55">
