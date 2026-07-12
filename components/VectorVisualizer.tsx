@@ -1,6 +1,6 @@
 "use client";
 
-import { Line, OrbitControls, Text } from "@react-three/drei";
+import { OrbitControls, Text } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
@@ -403,18 +403,6 @@ function AnatomicalBoundingHeart({ showLabel = true }: { showLabel?: boolean }) 
           wireframe
         />
       </mesh>
-      <Line
-        points={[
-          CONDUCTION_POINTS.sa,
-          CONDUCTION_POINTS.av,
-          CONDUCTION_POINTS.his,
-          CONDUCTION_POINTS.purkinjeApex,
-        ]}
-        color="#e2e8f0"
-        lineWidth={1.2}
-        transparent
-        opacity={0.42}
-      />
       {showLabel ? (
         <Text
           anchorX="center"
