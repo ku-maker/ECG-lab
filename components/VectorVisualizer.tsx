@@ -389,9 +389,9 @@ function AnatomicalBoundingHeart({ showLabel = true }: { showLabel?: boolean }) 
   return (
     <group>
       <mesh
-        position={SCENE_TARGET}
+        position={[SCENE_TARGET[0], -0.45, SCENE_TARGET[2]]}
         rotation={[0.12, 0.24, -0.24]}
-        scale={[1.4, 1.3, 0.85]}
+        scale={[1.75, 1.9, 1.0]}
       >
         <latheGeometry args={[HEART_PROFILE, 48]} />
         <meshStandardMaterial
