@@ -717,20 +717,19 @@ export function VectorVisualizer() {
             selectedLead={selectedLead}
             showLabels={!isMobile}
           />
-          <div className="pointer-events-none absolute top-4 left-4 text-cyan-100">
-            <div className="text-xs font-semibold uppercase tracking-wider text-cyan-200/70">
+          {/* 注釈は上端(タイトル)・下端(免責文)へ振り分け、中央の3Dモデルに被らないようにする。 */}
+          <div className="pointer-events-none absolute top-3 left-4 text-cyan-100">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-cyan-200/60">
               Conduction Map
             </div>
-            <h2 className="text-sm font-semibold md:text-base">
-              刺激伝導マップ
-            </h2>
-            <div className="mt-2 inline-flex rounded-md border border-cyan-300/20 bg-cyan-300/10 px-2 py-1 font-mono text-[10px] text-cyan-100">
-              View angle: Lead {selectedLead}-like
-            </div>
-            <p className="mt-3 max-w-[18rem] text-xs leading-relaxed text-cyan-100/72">
-              正常洞調律における刺激伝導の概念図です。実際の3D心臓電気ベクトルや12誘導心電図を厳密に再現するものではありません。
-            </p>
+            <h2 className="text-sm font-semibold">刺激伝導マップ</h2>
           </div>
+          <div className="pointer-events-none absolute top-3 right-4 inline-flex rounded border border-cyan-300/15 bg-cyan-300/5 px-1.5 py-0.5 font-mono text-[10px] text-cyan-100/75">
+            View angle: Lead {selectedLead}-like
+          </div>
+          <p className="pointer-events-none absolute bottom-2 left-4 right-4 text-[10px] leading-snug text-cyan-100/55">
+            正常洞調律における刺激伝導の概念図です。実際の3D心臓電気ベクトルや12誘導心電図を厳密に再現するものではありません。
+          </p>
         </section>
 
         <section aria-label="2D心電図波形" className="flex min-h-0">
