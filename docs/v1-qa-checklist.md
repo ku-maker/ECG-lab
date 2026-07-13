@@ -74,17 +74,41 @@ safe to show as an educational tool.
 - [ ] QRS beeps remain reasonably synchronized with visible beats.
 - [ ] VF/flatline warning audio does not continue incorrectly after switching or resetting.
 
-## Conduction Map
+## Conduction Map (synchronized 12-lead view)
 
+### Safety / positioning (keep visible)
 - [ ] The Conduction tab opens.
 - [ ] The screen is labeled as Conduction Map / stimulus-conduction learning, not full vectorcardiography.
-- [ ] Lead-like view controls can be changed.
-- [ ] The note explaining that this is not true 12-lead waveform generation is visible.
-- [ ] The conceptual disclaimer is visible.
-- [ ] Moving the slider updates the Lead II waveform progress.
-- [ ] Moving the slider updates the conduction animation.
-- [ ] P wave, QRS, ST segment, T wave, and rest labels appear at plausible points.
+- [ ] The disclaimer notes the waveform is a simplified per-lead dipole projection (precordial V1–V6 approximate), not a clinical 12-lead ECG.
+
+### Lead switching drives all three (3D view + glow + waveform)
+- [ ] Selecting each of the 12 leads changes (a) the 3D camera angle, (b) the conduction-path glow target, and (c) the 2D waveform.
+- [ ] Waveform polarity is medically sensible: aVR mainly negative, II/aVF clearly positive, aVL near-flat (small P/T, isoelectric QRS).
+- [ ] Lead II looks like normal NSR (upright P, sharp upright R, upright T).
+- [ ] Switching between coincident simplified leads (e.g. V4↔II, V6↔I) shows little/no change — this is an intended MVP limit, not a bug.
+
+### Clock / synchronization
+- [ ] Play animates the cycle; Pause holds the phase.
+- [ ] With Play or the scrub slider, the 3D glow, waveform cursor, reveal, and %/ms/mV readout all move at the same phase.
+- [ ] Grabbing/releasing the slider during playback does not make the phase jump.
+- [ ] P wave, QRS, ST segment, T wave, and rest phase labels appear at plausible points.
+
+### Repolarization glow
+- [ ] During the T wave the ventricular tubes glow cyan uniformly (a single gentle rise/fall), with no light flowing/reversing along the tubes and no rapid flicker.
+- [ ] QRS still shows the forward pink/purple pulse.
+
+### 3D model
+- [ ] The heart reads as a heart-like tapered shape (not an ellipsoid); conduction paths sit inside it with no tubes poking out near the apex.
+- [ ] At rest the wireframe and paths are clearly visible.
+- [ ] 3D node labels show on desktop and are hidden on mobile (node spheres remain).
+
+### Layout / responsive
+- [ ] The waveform is fully visible (never clipped) at any lead and any phase, on desktop and mobile (375px).
 - [ ] The view remains usable at mobile width.
+
+### Automated (objective gate)
+- [ ] `npm run verify:all` exits 0 (lead axes, activation, evaluate, Lead II projection r≥0.90, clock, camera, all-lead projection, clock integration, repol glow, graph fit).
+- [ ] `npm run lint`, type check, and `npm run build` pass.
 
 ## App Icons / Metadata
 
