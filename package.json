@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run lint && npm run typecheck && npm run validate:ecg && npm run verify:all && npm run build",
     "validate:ecg": "node scripts/validate-ecg-content.mjs",
     "verify:leadaxes": "node scripts/verify-lead-axes.mjs",
     "verify:activation": "node scripts/verify-activation-nsr.mjs",
