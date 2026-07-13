@@ -4,6 +4,28 @@
 
 ### Added
 
+- Rebuilt the Conduction map into a synchronized 12-lead learning view: selecting
+  a lead now drives the 3D camera, the conduction-path glow, and the 2D waveform
+  from a single source of truth.
+  - Cardiac electrical activity is modeled as a time-varying dipole vector
+    (activation timeline) and projected onto each lead's axis
+    (`leadValue = dipole · leadAxis`), so every lead's waveform is generated,
+    not hardcoded. Lead II matches the reference NSR template (shape correlation
+    r ≈ 0.97); aVR is negative, II/aVF positive, aVL near-isoelectric, as expected.
+  - A single cardiac clock (`useCardiacClock`) with Play/Pause and a scrub slider
+    keeps the 3D glow, waveform cursor, and reveal in phase.
+  - Depolarization glows as a forward pulse (pink/purple); repolarization is a
+    directionless cyan glow (no misleading reverse flow along the His-Purkinje
+    tubes).
+  - P-wave and T-wave dipole axes are tilted slightly off the QRS axis
+    (physiologic QRS-T angle) so aVL is no longer perfectly flat.
+  - Heart model reshaped from an ellipsoid into a heart-like lathe geometry with
+    an apex taper; the floor grid was removed and 3D visibility improved.
+  - The 2D waveform uses a common vertical scale derived from all 12 leads, so no
+    lead is clipped at any phase or on mobile.
+  - Automated checks back each layer (`npm run verify:all`): lead axes, activation
+    timeline, dipole evaluation, Lead II projection gate, cardiac clock, camera,
+    all-lead projection, clock integration, repolarization glow, and graph fit.
 - Added ECG Lab logo-based favicon, app icon, and social sharing thumbnail assets.
 - Added text-based Observation Guide cards for ECG rhythm learning in Learning mode.
 - Added rhythm-specific observation points without overlaying labels on the live ECG waveform.
