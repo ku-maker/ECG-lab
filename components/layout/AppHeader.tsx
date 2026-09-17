@@ -23,10 +23,12 @@ const modeTabs: Array<{
   label: string;
   icon: typeof GraduationCap;
 }> = [
-  { id: "learning", label: "Learning", icon: GraduationCap },
-  { id: "quiz", label: "Quiz", icon: BrainCircuit },
-  { id: "compare", label: "Compare", icon: GitCompareArrows },
-  { id: "vector", label: "Conduction", icon: Activity },
+  { id: "learning", label: "学習", icon: GraduationCap },
+  { id: "quiz", label: "クイズ", icon: BrainCircuit },
+  { id: "compare", label: "比較", icon: GitCompareArrows },
+  { id: "vector", label: "刺激伝導", icon: Activity },
+  { id: "twelve", label: "12誘導学習", icon: GraduationCap },
+  { id: "twelveQuiz", label: "12誘導クイズ", icon: BrainCircuit },
 ];
 
 export function AppHeader({ appMode, onAppModeChange }: AppHeaderProps) {
@@ -44,9 +46,9 @@ export function AppHeader({ appMode, onAppModeChange }: AppHeaderProps) {
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
         <div
-          className="flex rounded-lg border border-border bg-muted/60 p-1"
+          className="grid min-w-0 flex-1 grid-cols-6 rounded-lg border border-border bg-muted/60 p-1"
           role="tablist"
           aria-label="アプリモード"
         >
@@ -64,18 +66,18 @@ export function AppHeader({ appMode, onAppModeChange }: AppHeaderProps) {
                 aria-selected={isActive}
                 onClick={() => onAppModeChange(mode.id)}
                 className={cn(
-                  "h-8 gap-1.5 px-2.5 text-xs",
+                  "h-8 min-w-0 gap-1.5 px-1 text-xs sm:px-2.5",
                   isActive && "shadow-sm"
                 )}
               >
-                <Icon className="size-3.5" aria-hidden />
+                <Icon className="hidden size-3.5 sm:block" aria-hidden />
                 {mode.label}
               </Button>
             );
           })}
         </div>
         <Badge variant="secondary" className="hidden sm:inline-flex">
-          {appMode === "quiz"
+          {appMode === "twelve" ? "12誘導学習" : appMode === "twelveQuiz" ? "12誘導クイズ" : appMode === "quiz"
             ? "クイズモード"
             : appMode === "compare"
               ? "比較モード"
@@ -83,7 +85,7 @@ export function AppHeader({ appMode, onAppModeChange }: AppHeaderProps) {
               ? "伝導マップ"
               : "学習モード"}
         </Badge>
-        <Badge variant="outline" className="font-mono text-xs">
+        <Badge variant="outline" className="hidden font-mono text-xs sm:inline-flex">
           v1.3
         </Badge>
       </div>

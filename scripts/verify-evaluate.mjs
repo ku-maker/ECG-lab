@@ -97,11 +97,12 @@ const r1 = evaluateDipole(timeline, F.r, out);
 const r2 = evaluateDipole(timeline, F.pPeak, out);
 check("evaluateDipole reuses out (same ref)", r1 === out && r2 === out, "");
 
-// 6. evaluateSegments が8キー全て、値が [0,1]
+// 6. evaluateSegments が9キー全て、値が [0,1]
 const seg = evaluateSegments(timeline, F.r);
 const keys = Object.keys(seg);
 const rangeOk = Object.values(seg).every((v) => v >= 0 && v <= 1 && Number.isFinite(v));
-check("evaluateSegments has 8 keys", keys.length === 8, `keys=${keys.length}`);
+check("evaluateSegments has 11 keys", keys.length === 11, `keys=${keys.length}`);
+check("NSR has no accessory-pathway glow", seg.accessoryPathway === 0, `glow=${seg.accessoryPathway}`);
 check("all segment glows in [0,1]", rangeOk, `vals=[${Object.values(seg).map((v) => v.toFixed(2)).join(",")}]`);
 
 // 7. 範囲外時刻で NaN/Infinity を出さない

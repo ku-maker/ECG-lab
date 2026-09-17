@@ -47,7 +47,9 @@ export function CaseSelector({
           className="h-11 w-full rounded-xl border-border bg-card text-sm shadow-sm"
           aria-label="症例を選択"
         >
-          <SelectValue placeholder="— 症例を選択してください —" />
+          <SelectValue placeholder="— 症例を選択してください —">
+            {ECG_CASES.find((item) => item.id === selectedCaseId)?.label}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent className="rounded-xl">
           {ECG_CASES.map((c) => (

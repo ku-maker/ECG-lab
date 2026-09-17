@@ -16,6 +16,9 @@ import type {
 const ALL_SEGMENTS: ConductionSegmentId[] = [
   "saAtrial",
   "avDelay",
+  "accessoryAtrialApproach",
+  "accessoryPathway",
+  "accessoryVentricularSpread",
   "hisBundle",
   "rightBundle",
   "leftAnterior",

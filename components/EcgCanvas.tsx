@@ -1,4 +1,5 @@
 "use client";
+import { beatToTemplateMs, templateToBeatMs } from "@/lib/ecg/rateTiming";
 
 import {
   forwardRef,
@@ -7,6 +8,12 @@ import {
   useRef,
   useState,
 } from "react";
+import { AV_BLOCK_P_BPM, AV_BLOCK_ESCAPE_BPM, AV_BLOCK_P_PEAK_OFFSET_MS, AV_BLOCK_QRS_PEAK_OFFSET_MS, AV_BLOCK_ESCAPE_PHASE_OFFSET_MS, isMobitz2DroppedBeat, getWenckebachPPeakOffsetMs, getWenckebachQrsPeakOffsetMs } from "@/lib/ecg/teachingTiming";
+import { WaveformTeachingOverlay } from "@/components/WaveformTeachingOverlay";
+import { buildTeachingMarks, type TeachingFocus } from "@/lib/ecg/teachingHighlights";
+import { MEASUREMENT_TASKS, type MeasurementKind } from "@/lib/ecg/measurementPractice";
+import { WaveformCalipers } from "@/components/WaveformCalipers";
+import { gridSpacing, type MonitorScale } from "@/lib/ecg/monitorScale";
 import { cn } from "@/lib/utils";
 import {
   ECG_TEMPLATE_OPTIONS,
@@ -25,7 +32,7 @@ const AF_DISPLAY_RANGE_MV = { min: -0.35, max: 1.15 };
 const PVC_EVERY_N_BEATS = 4;
 const PVC_PREMATURE_FRACTION = 0.72;
 const PVC_DURATION_MS = 620;
-const PVC_PEAK_OFFSET_MS = 190;
+const PVC_PEAK_OFFSET_MS = 150;
 const PVC_COMPENSATORY_PAUSE_MS = 650;
 const PVC_DISPLAY_RANGE_MV = { min: -1.45, max: 1.65 };
 const ECG_BEEP_FREQUENCY_HZ = 500;
@@ -36,10 +43,7 @@ const PAC_EVERY_N_BEATS = 4;
 const PAC_PREMATURE_FRACTION = 0.62;
 const PAC_DURATION_FRACTION = 0.82;
 const PAC_PAUSE_MS = 420;
-const MOBITZ2_DROP_EVERY_N_BEATS = 4;
 const MOBITZ2_DISPLAY_RANGE_MV = { min: -0.35, max: 1.15 };
-const WENCKEBACH_CYCLE_BEATS = 4;
-const WENCKEBACH_PR_DELAY_FRACTIONS = [0.22, 0.31, 0.4] as const;
 const SVT_LOCKED_BPM = 180;
 const SVT_DISPLAY_RANGE_MV = { min: -0.35, max: 1.15 };
 const STEMI_DISPLAY_RANGE_MV = { min: -0.2, max: 1.2 };
@@ -52,11 +56,6 @@ const AFL_CONDUCTION_RATIO = 4;
 const AFL_VENTRICULAR_BPM = AFL_ATRIAL_BPM / AFL_CONDUCTION_RATIO;
 const AFL_QRS_PEAK_OFFSET_MS = 70;
 const AFL_DISPLAY_RANGE_MV = { min: -0.45, max: 1.25 };
-const AV_BLOCK_P_BPM = 82;
-const AV_BLOCK_ESCAPE_BPM = 35;
-const AV_BLOCK_P_PEAK_OFFSET_MS = 130;
-const AV_BLOCK_QRS_PEAK_OFFSET_MS = 180;
-const AV_BLOCK_ESCAPE_PHASE_OFFSET_MS = 360;
 const AV_BLOCK3_DISPLAY_RANGE_MV = { min: -0.55, max: 1.35 };
 const VF_ALARM_INTERVAL_MS = 850;
 const VF_ALARM_FREQUENCY_HZ = 180;
@@ -79,12 +78,17 @@ type EcgCanvasProps = {
   audioVolume?: number;
   width?: number;
   height?: number;
+  paused?: boolean;
+  freezeAtMs?: number;
+  measurementPractice?: {kind: MeasurementKind; hint: boolean};
+  teachingFocus?: TeachingFocus | null;
   secondsVisible?: number;
   pxPerMv?: number;
   className?: string;
 };
 
 export type EcgCanvasHandle = {
+  getElapsedMs: () => number;
   resumeAudio: () => void;
   triggerShock: () => void;
   resetTimeline: () => void;
@@ -132,7 +136,7 @@ function getTemplateValueAtMs(template: BeatTemplate, msInTemplate: number) {
   const durationMs = template.durationMs;
 
   const clampedMs = Math.max(0, Math.min(msInTemplate, durationMs - 1));
-  const rawIndex = (clampedMs / durationMs) * (n - 1);
+  const rawIndex = Math.min(n - 1, (clampedMs / durationMs) * n);
 
   const i1 = Math.floor(rawIndex);
   const t = rawIndex - i1;
@@ -158,8 +162,17 @@ function isPvcTemplate(template: BeatTemplate): boolean {
   return template.id.toLowerCase().includes("pvc");
 }
 
+function getPvcEveryNBeats(template: BeatTemplate): number {
+  return template.id.toLowerCase().includes("bigeminy") ? 2 : PVC_EVERY_N_BEATS;
+}
+
 function isPacTemplate(template: BeatTemplate): boolean {
-  return template.id.toLowerCase().includes("pac");
+  const templateId = template.id.toLowerCase();
+  return templateId === "pac-lead2-v0" || templateId === "pac-bigeminy-lead2-v0";
+}
+
+function getPacEveryNBeats(template: BeatTemplate): number {
+  return template.id.toLowerCase().includes("bigeminy") ? 2 : PAC_EVERY_N_BEATS;
 }
 
 function isMobitz2Template(template: BeatTemplate): boolean {
@@ -242,11 +255,11 @@ function getPvcBeatMs(bpm: number): number {
   return bpm > 0 ? 60_000 / bpm : DEFAULT_TEMPLATE.durationMs;
 }
 
-function getPvcCycleMs(bpm: number): number {
-  return getPvcBeatMs(bpm) * PVC_EVERY_N_BEATS + PVC_COMPENSATORY_PAUSE_MS;
+function getPvcCycleMs(bpm: number, everyN = PVC_EVERY_N_BEATS): number {
+  return getPrematureStartMs(getPvcBeatMs(bpm), PVC_PREMATURE_FRACTION, everyN - 1) + PVC_DURATION_MS + PVC_COMPENSATORY_PAUSE_MS;
 }
 
-function getPvcCyclePosition(timeMs: number, bpm: number): {
+function getPvcCyclePosition(timeMs: number, bpm: number, everyN = PVC_EVERY_N_BEATS): {
   cycleStartMs: number;
   msInCycle: number;
   beatMs: number;
@@ -255,15 +268,19 @@ function getPvcCyclePosition(timeMs: number, bpm: number): {
   pauseEndMs: number;
 } {
   const beatMs = getPvcBeatMs(bpm);
-  const cycleMs = getPvcCycleMs(bpm);
+  const cycleMs = getPvcCycleMs(bpm, everyN);
   const cycleIndex = Math.floor(timeMs / cycleMs);
   const cycleStartMs = cycleIndex * cycleMs;
   const msInCycle = timeMs - cycleStartMs;
-  const pvcStartMs = (PVC_EVERY_N_BEATS - 1 + PVC_PREMATURE_FRACTION) * beatMs;
+  const pvcStartMs = getPrematureStartMs(beatMs, PVC_PREMATURE_FRACTION, everyN - 1);
   const pvcEndMs = pvcStartMs + PVC_DURATION_MS;
   const pauseEndMs = pvcEndMs + PVC_COMPENSATORY_PAUSE_MS;
 
   return { cycleStartMs, msInCycle, beatMs, pvcStartMs, pvcEndMs, pauseEndMs };
+}
+
+function getPrematureStartMs(beatMs: number, fraction: number, normalBeats = PVC_EVERY_N_BEATS - 1): number {
+  return (normalBeats - 1) * beatMs + Math.max(fraction * beatMs, templateToBeatMs(DEFAULT_TEMPLATE, DEFAULT_TEMPLATE.fiducialsMs.qrsOff ?? 460, beatMs) + 10);
 }
 
 function getPvcWaveValueAtMs(msInPvc: number): number {
@@ -275,9 +292,9 @@ function getPvcWaveValueAtMs(msInPvc: number): number {
   );
 }
 
-function getPvcRhythmValueAtTimeMs(timeMs: number, bpm: number): number {
+function getPvcRhythmValueAtTimeMs(timeMs: number, bpm: number, everyN = PVC_EVERY_N_BEATS): number {
   const { msInCycle, beatMs, pvcStartMs, pvcEndMs, pauseEndMs } =
-    getPvcCyclePosition(timeMs, bpm);
+    getPvcCyclePosition(timeMs, bpm, everyN);
 
   if (msInCycle >= pvcStartMs && msInCycle < pvcEndMs) {
     return getPvcWaveValueAtMs(msInCycle - pvcStartMs);
@@ -292,7 +309,7 @@ function getPvcRhythmValueAtTimeMs(timeMs: number, bpm: number): number {
       ? msInCycle
       : msInCycle - PVC_COMPENSATORY_PAUSE_MS;
   const nsrPhaseMs = ((nsrElapsedMs % beatMs) + beatMs) % beatMs;
-  const templateMs = (nsrPhaseMs / beatMs) * DEFAULT_TEMPLATE.durationMs;
+  const templateMs = beatToTemplateMs(DEFAULT_TEMPLATE, nsrPhaseMs, beatMs);
 
   return getTemplateValueAtMs(DEFAULT_TEMPLATE, templateMs);
 }
@@ -302,19 +319,19 @@ function getPacBeatMs(bpm: number): number {
 }
 
 function getPacDurationMs(bpm: number): number {
-  return getPacBeatMs(bpm) * PAC_DURATION_FRACTION;
+  return Math.max(300, getPacBeatMs(bpm) * PAC_DURATION_FRACTION);
 }
 
-function getPacCycleMs(bpm: number): number {
+function getPacCycleMs(bpm: number, everyN = PAC_EVERY_N_BEATS): number {
   const beatMs = getPacBeatMs(bpm);
   return (
-    (PAC_EVERY_N_BEATS - 1 + PAC_PREMATURE_FRACTION) * beatMs +
+    getPrematureStartMs(beatMs, PAC_PREMATURE_FRACTION, everyN - 1) +
     getPacDurationMs(bpm) +
     PAC_PAUSE_MS
   );
 }
 
-function getPacCyclePosition(timeMs: number, bpm: number): {
+function getPacCyclePosition(timeMs: number, bpm: number, everyN = PAC_EVERY_N_BEATS): {
   cycleStartMs: number;
   msInCycle: number;
   beatMs: number;
@@ -323,24 +340,24 @@ function getPacCyclePosition(timeMs: number, bpm: number): {
   pauseEndMs: number;
 } {
   const beatMs = getPacBeatMs(bpm);
-  const cycleMs = getPacCycleMs(bpm);
+  const cycleMs = getPacCycleMs(bpm, everyN);
   const cycleIndex = Math.floor(timeMs / cycleMs);
   const cycleStartMs = cycleIndex * cycleMs;
   const msInCycle = timeMs - cycleStartMs;
-  const pacStartMs = (PAC_EVERY_N_BEATS - 1 + PAC_PREMATURE_FRACTION) * beatMs;
+  const pacStartMs = getPrematureStartMs(beatMs, PAC_PREMATURE_FRACTION, everyN - 1);
   const pacEndMs = pacStartMs + getPacDurationMs(bpm);
   const pauseEndMs = pacEndMs + PAC_PAUSE_MS;
 
   return { cycleStartMs, msInCycle, beatMs, pacStartMs, pacEndMs, pauseEndMs };
 }
 
-function getPacRhythmValueAtTimeMs(timeMs: number, bpm: number): number {
+function getPacRhythmValueAtTimeMs(timeMs: number, bpm: number, everyN = PAC_EVERY_N_BEATS): number {
   const { msInCycle, beatMs, pacStartMs, pacEndMs, pauseEndMs } =
-    getPacCyclePosition(timeMs, bpm);
+    getPacCyclePosition(timeMs, bpm, everyN);
 
   if (msInCycle >= pacStartMs && msInCycle < pacEndMs) {
     const msInPac = msInCycle - pacStartMs;
-    const templateMs = (msInPac / getPacDurationMs(bpm)) * DEFAULT_TEMPLATE.durationMs;
+    const templateMs = beatToTemplateMs(DEFAULT_TEMPLATE, msInPac, getPacDurationMs(bpm));
     const deformedEarlyP =
       gaussian(templateMs, DEFAULT_TEMPLATE.fiducialsMs.pPeak ?? 160, 34) *
       -0.035;
@@ -352,23 +369,17 @@ function getPacRhythmValueAtTimeMs(timeMs: number, bpm: number): number {
   }
 
   const nsrPhaseMs = ((msInCycle % beatMs) + beatMs) % beatMs;
-  const templateMs = (nsrPhaseMs / beatMs) * DEFAULT_TEMPLATE.durationMs;
+  const templateMs = beatToTemplateMs(DEFAULT_TEMPLATE, nsrPhaseMs, beatMs);
 
   return getTemplateValueAtMs(DEFAULT_TEMPLATE, templateMs);
 }
 
-function isMobitz2DroppedBeat(beatIndex: number): boolean {
-  const normalizedIndex =
-    ((beatIndex % MOBITZ2_DROP_EVERY_N_BEATS) + MOBITZ2_DROP_EVERY_N_BEATS) %
-    MOBITZ2_DROP_EVERY_N_BEATS;
-  return normalizedIndex === MOBITZ2_DROP_EVERY_N_BEATS - 1;
-}
 
 function getMobitz2RhythmValueAtTimeMs(timeMs: number, bpm: number): number {
   const beatMs = bpm > 0 ? 60_000 / bpm : DEFAULT_TEMPLATE.durationMs;
   const beatIndex = Math.floor(timeMs / beatMs);
   const phaseMs = ((timeMs % beatMs) + beatMs) % beatMs;
-  const templateMs = (phaseMs / beatMs) * DEFAULT_TEMPLATE.durationMs;
+  const templateMs = beatToTemplateMs(DEFAULT_TEMPLATE, phaseMs, beatMs);
 
   if (!isMobitz2DroppedBeat(beatIndex)) {
     return getTemplateValueAtMs(DEFAULT_TEMPLATE, templateMs);
@@ -386,31 +397,9 @@ function getWenckebachBeatMs(bpm: number): number {
   return bpm > 0 ? 60_000 / bpm : DEFAULT_TEMPLATE.durationMs;
 }
 
-function getWenckebachCycleIndex(beatIndex: number): number {
-  return (
-    ((beatIndex % WENCKEBACH_CYCLE_BEATS) + WENCKEBACH_CYCLE_BEATS) %
-    WENCKEBACH_CYCLE_BEATS
-  );
-}
 
-function isWenckebachDroppedBeat(beatIndex: number): boolean {
-  return getWenckebachCycleIndex(beatIndex) === WENCKEBACH_CYCLE_BEATS - 1;
-}
 
-function getWenckebachPPeakOffsetMs(beatMs: number): number {
-  return beatMs * 0.15;
-}
 
-function getWenckebachQrsPeakOffsetMs(
-  beatMs: number,
-  beatIndex: number
-): number | null {
-  if (isWenckebachDroppedBeat(beatIndex)) return null;
-
-  const cycleIndex = getWenckebachCycleIndex(beatIndex);
-  const prDelayMs = WENCKEBACH_PR_DELAY_FRACTIONS[cycleIndex] * beatMs;
-  return getWenckebachPPeakOffsetMs(beatMs) + prDelayMs;
-}
 
 function getWenckebachRhythmValueAtTimeMs(timeMs: number, bpm: number): number {
   const beatMs = getWenckebachBeatMs(bpm);
@@ -439,8 +428,7 @@ function getSvtRhythmValueAtTimeMs(timeMs: number): number {
   const phaseMs = ((timeMs % beatMs) + beatMs) % beatMs;
   const templateMs = (phaseMs / beatMs) * DEFAULT_TEMPLATE.durationMs;
   const baseValue = getTemplateValueAtMs(DEFAULT_TEMPLATE, templateMs);
-  const pPeakMs = DEFAULT_TEMPLATE.fiducialsMs.pPeak ?? 180;
-  const pSuppression = gaussian(templateMs, pPeakMs, 44) * 0.13;
+  const pSuppression = templateMs < (DEFAULT_TEMPLATE.fiducialsMs.qrsOn ?? 360) ? baseValue : 0;
   const buriedRetrogradeP = gaussian(templateMs, 720, 38) * -0.025;
 
   return baseValue - pSuppression + buriedRetrogradeP;
@@ -449,7 +437,7 @@ function getSvtRhythmValueAtTimeMs(timeMs: number): number {
 function getStemiRhythmValueAtTimeMs(timeMs: number, bpm: number): number {
   const beatMs = bpm > 0 ? 60_000 / bpm : DEFAULT_TEMPLATE.durationMs;
   const phaseMs = ((timeMs % beatMs) + beatMs) % beatMs;
-  const templateMs = (phaseMs / beatMs) * DEFAULT_TEMPLATE.durationMs;
+  const templateMs = beatToTemplateMs(DEFAULT_TEMPLATE, phaseMs, beatMs);
   const baseValue = getTemplateValueAtMs(DEFAULT_TEMPLATE, templateMs);
   const sWaveLift = gaussian(templateMs, DEFAULT_TEMPLATE.fiducialsMs.s ?? 430, 28) * 0.23;
   const stWindow =
@@ -583,7 +571,7 @@ function getEcgValueAtTimeMs(
   const phaseMs = ((timeMs % beatMs) + beatMs) % beatMs;
 
   // BPMに合わせて、1拍テンプレートを伸縮する
-  const templateMs = (phaseMs / beatMs) * template.durationMs;
+  const templateMs = beatToTemplateMs(template, phaseMs, beatMs);
 
   return getTemplateValueAtMs(template, templateMs);
 }
@@ -738,9 +726,17 @@ function getIrregularEcgValueAtTimeMs(
   const beatStartMs = getIrregularBeatStartMs(baseBeatMs, beatIndex);
   const beatDurationMs = getIrregularBeatDurationMs(baseBeatMs, beatIndex);
   const phaseMs = timeMs - beatStartMs;
-  const templateMs = (phaseMs / beatDurationMs) * template.durationMs;
-
-  return getTemplateValueAtMs(template, templateMs);
+  const templateMs = beatToTemplateMs(template, phaseMs, beatDurationMs);
+  const value = getTemplateValueAtMs(template, templateMs);
+  if (template.id === "mat-lead2-v0") {
+    const pOn = template.fiducialsMs.pOn ?? 0;
+    const pOff = template.fiducialsMs.pOff ?? pOn;
+    if (templateMs >= pOn && templateMs <= pOff) {
+      const patterns = [0.65, -0.7, 1.15];
+      return value * patterns[((beatIndex % patterns.length) + patterns.length) % patterns.length];
+    }
+  }
+  return value;
 }
 
 function getRhythmValueAtTimeMs(
@@ -776,11 +772,11 @@ function getRhythmValueAtTimeMs(
   }
 
   if (isPvcTemplate(template)) {
-    return getPvcRhythmValueAtTimeMs(timeMs, effectiveBpm);
+    return getPvcRhythmValueAtTimeMs(timeMs, effectiveBpm, getPvcEveryNBeats(template));
   }
 
   if (isPacTemplate(template)) {
-    return getPacRhythmValueAtTimeMs(timeMs, effectiveBpm);
+    return getPacRhythmValueAtTimeMs(timeMs, effectiveBpm, getPacEveryNBeats(template));
   }
 
   if (isMobitz2Template(template)) {
@@ -858,16 +854,16 @@ function forEachQrsPeakInRange(
   const activeBpm = getEffectiveBpmForTemplate(template, bpm);
 
   if (isPvcTemplate(template)) {
-    const cycleMs = getPvcCycleMs(activeBpm);
+    const everyN = getPvcEveryNBeats(template);
+    const cycleMs = getPvcCycleMs(activeBpm, everyN);
     const firstCycleIndex = Math.floor(fromMs / cycleMs) - 1;
     const lastCycleIndex = Math.floor(toMs / cycleMs) + 1;
     const beatMs = getPvcBeatMs(activeBpm);
     const pvcPeakOffsetMs =
-      (PVC_EVERY_N_BEATS - 1 + PVC_PREMATURE_FRACTION) * beatMs +
+      getPrematureStartMs(beatMs, PVC_PREMATURE_FRACTION, everyN - 1) +
       PVC_PEAK_OFFSET_MS;
     const nsrRPeakOffsetMs =
-      ((DEFAULT_TEMPLATE.fiducialsMs.r ?? 400) / DEFAULT_TEMPLATE.durationMs) *
-      beatMs;
+      templateToBeatMs(DEFAULT_TEMPLATE, DEFAULT_TEMPLATE.fiducialsMs.r ?? 400, beatMs);
 
     for (
       let cycleIndex = firstCycleIndex;
@@ -876,7 +872,7 @@ function forEachQrsPeakInRange(
     ) {
       const cycleStartMs = cycleIndex * cycleMs;
 
-      for (let beatIndex = 0; beatIndex < PVC_EVERY_N_BEATS - 1; beatIndex++) {
+      for (let beatIndex = 0; beatIndex < everyN - 1; beatIndex++) {
         const peakTimeMs = cycleStartMs + beatIndex * beatMs + nsrRPeakOffsetMs;
         if (peakTimeMs > fromMs && peakTimeMs <= toMs) {
           callback(peakTimeMs);
@@ -892,17 +888,16 @@ function forEachQrsPeakInRange(
   }
 
   if (isPacTemplate(template)) {
-    const cycleMs = getPacCycleMs(activeBpm);
+    const everyN = getPacEveryNBeats(template);
+    const cycleMs = getPacCycleMs(activeBpm, everyN);
     const firstCycleIndex = Math.floor(fromMs / cycleMs) - 1;
     const lastCycleIndex = Math.floor(toMs / cycleMs) + 1;
     const beatMs = getPacBeatMs(activeBpm);
     const pacPeakOffsetMs =
-      (PAC_EVERY_N_BEATS - 1 + PAC_PREMATURE_FRACTION) * beatMs +
-      ((DEFAULT_TEMPLATE.fiducialsMs.r ?? 350) / DEFAULT_TEMPLATE.durationMs) *
-        getPacDurationMs(activeBpm);
+      getPrematureStartMs(beatMs, PAC_PREMATURE_FRACTION, everyN - 1) +
+      templateToBeatMs(DEFAULT_TEMPLATE, DEFAULT_TEMPLATE.fiducialsMs.r ?? 400, getPacDurationMs(activeBpm));
     const nsrRPeakOffsetMs =
-      ((DEFAULT_TEMPLATE.fiducialsMs.r ?? 350) / DEFAULT_TEMPLATE.durationMs) *
-      beatMs;
+      templateToBeatMs(DEFAULT_TEMPLATE, DEFAULT_TEMPLATE.fiducialsMs.r ?? 400, beatMs);
 
     for (
       let cycleIndex = firstCycleIndex;
@@ -911,7 +906,7 @@ function forEachQrsPeakInRange(
     ) {
       const cycleStartMs = cycleIndex * cycleMs;
 
-      for (let beatIndex = 0; beatIndex < PAC_EVERY_N_BEATS - 1; beatIndex++) {
+      for (let beatIndex = 0; beatIndex < everyN - 1; beatIndex++) {
         const peakTimeMs = cycleStartMs + beatIndex * beatMs + nsrRPeakOffsetMs;
         if (peakTimeMs > fromMs && peakTimeMs <= toMs) {
           callback(peakTimeMs);
@@ -1001,7 +996,7 @@ function forEachQrsPeakInRange(
     const qrsPeakTemplateMs =
       DEFAULT_TEMPLATE.fiducialsMs.r ?? DEFAULT_TEMPLATE.fiducialsMs.qrsOn ?? 0;
     const qrsPeakOffsetMs =
-      (qrsPeakTemplateMs / DEFAULT_TEMPLATE.durationMs) * beatMs;
+      templateToBeatMs(DEFAULT_TEMPLATE, qrsPeakTemplateMs, beatMs);
     const firstBeatIndex = Math.floor((fromMs - qrsPeakOffsetMs) / beatMs) - 1;
     const lastBeatIndex = Math.floor((toMs - qrsPeakOffsetMs) / beatMs) + 1;
 
@@ -1054,9 +1049,10 @@ function forEachQrsPeakInRange(
     return;
   }
 
+  const timingTemplate = isStemiTemplate(template) ? DEFAULT_TEMPLATE : template;
   const beatMs = activeBpm > 0 ? 60_000 / activeBpm : template.durationMs;
   const qrsPeakTemplateMs =
-    template.fiducialsMs.r ?? template.fiducialsMs.qrsOn ?? 0;
+    timingTemplate.fiducialsMs.r ?? timingTemplate.fiducialsMs.qrsOn ?? 0;
 
   if (rhythm === "irregular" && activeBpm > 0) {
     const firstBeatIndex = findIrregularBeatIndex(fromMs, beatMs) - 1;
@@ -1066,7 +1062,7 @@ function forEachQrsPeakInRange(
       const beatStartMs = getIrregularBeatStartMs(beatMs, beatIndex);
       const beatDurationMs = getIrregularBeatDurationMs(beatMs, beatIndex);
       const peakTimeMs =
-        beatStartMs + (qrsPeakTemplateMs / template.durationMs) * beatDurationMs;
+        beatStartMs + templateToBeatMs(timingTemplate, qrsPeakTemplateMs, beatDurationMs);
       if (peakTimeMs > fromMs && peakTimeMs <= toMs) {
         callback(peakTimeMs);
       }
@@ -1074,7 +1070,7 @@ function forEachQrsPeakInRange(
     return;
   }
 
-  const qrsPeakOffsetMs = (qrsPeakTemplateMs / template.durationMs) * beatMs;
+  const qrsPeakOffsetMs = templateToBeatMs(timingTemplate, qrsPeakTemplateMs, beatMs);
   const firstBeatIndex = Math.floor((fromMs - qrsPeakOffsetMs) / beatMs) - 1;
   const lastBeatIndex = Math.floor((toMs - qrsPeakOffsetMs) / beatMs) + 1;
 
@@ -1090,20 +1086,20 @@ function forEachPvcRhythmPeakInRange(
   fromMs: number,
   toMs: number,
   bpm: number,
+  everyN: number,
   onNormalPeak: () => void,
   onPvcPeak: () => void
 ) {
   if (toMs <= fromMs) return;
 
-  const cycleMs = getPvcCycleMs(bpm);
+  const cycleMs = getPvcCycleMs(bpm, everyN);
   const beatMs = getPvcBeatMs(bpm);
   const firstCycleIndex = Math.floor(fromMs / cycleMs) - 1;
   const lastCycleIndex = Math.floor(toMs / cycleMs) + 1;
   const nsrRPeakOffsetMs =
-    ((DEFAULT_TEMPLATE.fiducialsMs.r ?? 400) / DEFAULT_TEMPLATE.durationMs) *
-    beatMs;
+    templateToBeatMs(DEFAULT_TEMPLATE, DEFAULT_TEMPLATE.fiducialsMs.r ?? 400, beatMs);
   const pvcPeakOffsetMs =
-    (PVC_EVERY_N_BEATS - 1 + PVC_PREMATURE_FRACTION) * beatMs +
+    getPrematureStartMs(beatMs, PVC_PREMATURE_FRACTION, everyN - 1) +
     PVC_PEAK_OFFSET_MS;
 
   for (
@@ -1113,7 +1109,7 @@ function forEachPvcRhythmPeakInRange(
   ) {
     const cycleStartMs = cycleIndex * cycleMs;
 
-    for (let beatIndex = 0; beatIndex < PVC_EVERY_N_BEATS - 1; beatIndex++) {
+    for (let beatIndex = 0; beatIndex < everyN - 1; beatIndex++) {
       const peakTimeMs = cycleStartMs + beatIndex * beatMs + nsrRPeakOffsetMs;
       if (peakTimeMs > fromMs && peakTimeMs <= toMs) {
         onNormalPeak();
@@ -1145,9 +1141,11 @@ function buildWaveformSampleXs(
 
   const beatMs = activeBpm > 0 ? 60_000 / activeBpm : template.durationMs;
   const visibleStartMs = elapsedMs - visibleMs;
-  const fiducialFractions = getFiducialFractionsInBeat(template);
+  const samplingTemplate = isStemiTemplate(template) ? DEFAULT_TEMPLATE : template;
+  const fiducialFractions = getFiducialFractionsInBeat(samplingTemplate);
   if (isPvcTemplate(template)) {
-    const cycleMs = getPvcCycleMs(activeBpm);
+    const everyN = getPvcEveryNBeats(template);
+    const cycleMs = getPvcCycleMs(activeBpm, everyN);
     const beatMs = getPvcBeatMs(activeBpm);
     const firstCycleIndex = Math.floor(visibleStartMs / cycleMs) - 1;
     const lastCycleIndex = Math.floor(elapsedMs / cycleMs) + 1;
@@ -1161,12 +1159,12 @@ function buildWaveformSampleXs(
       const cycleStartMs = cycleIndex * cycleMs;
       const pvcStartMs =
         cycleStartMs +
-        (PVC_EVERY_N_BEATS - 1 + PVC_PREMATURE_FRACTION) * beatMs;
+        getPrematureStartMs(beatMs, PVC_PREMATURE_FRACTION, everyN - 1);
 
-      for (let beatIndex = 0; beatIndex < PVC_EVERY_N_BEATS - 1; beatIndex++) {
+      for (let beatIndex = 0; beatIndex < everyN - 1; beatIndex++) {
         const beatStartMs = cycleStartMs + beatIndex * beatMs;
         for (const fiducialFraction of nsrFiducialFractions) {
-          const sampleTimeMs = beatStartMs + fiducialFraction * beatMs;
+          const sampleTimeMs = beatStartMs + templateToBeatMs(DEFAULT_TEMPLATE, fiducialFraction * DEFAULT_TEMPLATE.durationMs, beatMs);
           if (sampleTimeMs < visibleStartMs || sampleTimeMs > elapsedMs) {
             continue;
           }
@@ -1195,7 +1193,8 @@ function buildWaveformSampleXs(
   }
 
   if (isPacTemplate(template)) {
-    const cycleMs = getPacCycleMs(activeBpm);
+    const everyN = getPacEveryNBeats(template);
+    const cycleMs = getPacCycleMs(activeBpm, everyN);
     const beatMs = getPacBeatMs(activeBpm);
     const firstCycleIndex = Math.floor(visibleStartMs / cycleMs) - 1;
     const lastCycleIndex = Math.floor(elapsedMs / cycleMs) + 1;
@@ -1209,13 +1208,13 @@ function buildWaveformSampleXs(
       const cycleStartMs = cycleIndex * cycleMs;
       const pacStartMs =
         cycleStartMs +
-        (PAC_EVERY_N_BEATS - 1 + PAC_PREMATURE_FRACTION) * beatMs;
+        getPrematureStartMs(beatMs, PAC_PREMATURE_FRACTION, everyN - 1);
       const pacDurationMs = getPacDurationMs(activeBpm);
 
-      for (let beatIndex = 0; beatIndex < PAC_EVERY_N_BEATS - 1; beatIndex++) {
+      for (let beatIndex = 0; beatIndex < everyN - 1; beatIndex++) {
         const beatStartMs = cycleStartMs + beatIndex * beatMs;
         for (const fiducialFraction of nsrFiducialFractions) {
-          const sampleTimeMs = beatStartMs + fiducialFraction * beatMs;
+          const sampleTimeMs = beatStartMs + templateToBeatMs(DEFAULT_TEMPLATE, fiducialFraction * DEFAULT_TEMPLATE.durationMs, beatMs);
           if (sampleTimeMs < visibleStartMs || sampleTimeMs > elapsedMs) {
             continue;
           }
@@ -1225,7 +1224,7 @@ function buildWaveformSampleXs(
       }
 
       for (const fiducialFraction of nsrFiducialFractions) {
-        const sampleTimeMs = pacStartMs + fiducialFraction * pacDurationMs;
+        const sampleTimeMs = pacStartMs + templateToBeatMs(DEFAULT_TEMPLATE, fiducialFraction * DEFAULT_TEMPLATE.durationMs, pacDurationMs);
         if (sampleTimeMs < visibleStartMs || sampleTimeMs > elapsedMs) continue;
         const x = ((sampleTimeMs - visibleStartMs) / visibleMs) * width;
         if (x >= 0 && x <= width) xs.push(x);
@@ -1260,7 +1259,7 @@ function buildWaveformSampleXs(
         : nsrFiducialFractions;
 
       for (const fiducialFraction of fractions) {
-        const sampleTimeMs = beatStartMs + fiducialFraction * beatMs;
+        const sampleTimeMs = beatStartMs + templateToBeatMs(DEFAULT_TEMPLATE, fiducialFraction * DEFAULT_TEMPLATE.durationMs, beatMs);
         if (sampleTimeMs < visibleStartMs || sampleTimeMs > elapsedMs) continue;
         const x = ((sampleTimeMs - visibleStartMs) / visibleMs) * width;
         if (x >= 0 && x <= width) xs.push(x);
@@ -1335,7 +1334,7 @@ function buildWaveformSampleXs(
         : beatMs;
 
     for (const fiducialFraction of fiducialFractions) {
-      const sampleTimeMs = beatStartMs + fiducialFraction * beatDurationMs;
+      const sampleTimeMs = beatStartMs + templateToBeatMs(samplingTemplate, fiducialFraction * samplingTemplate.durationMs, beatDurationMs);
       if (sampleTimeMs < visibleStartMs || sampleTimeMs > elapsedMs) continue;
 
       const x = ((sampleTimeMs - visibleStartMs) / visibleMs) * width;
@@ -1434,51 +1433,29 @@ function getWaveformLayout(
   return { baselineY, pxPerMv: nextPxPerMv };
 }
 
-function drawGrid(
-  ctx: CanvasRenderingContext2D,
-  width: number,
-  height: number
-) {
+function drawGrid(ctx: CanvasRenderingContext2D, scale: MonitorScale) {
+  const { width, height, baselineY } = scale;
+  const spacing = gridSpacing(scale);
   ctx.save();
-
-  // 背景
   ctx.fillStyle = "#fff7f7";
   ctx.fillRect(0, 0, width, height);
-
-  // 小マス
-  ctx.strokeStyle = "#f3caca";
-  ctx.lineWidth = 0.5;
-
-  const small = 10;
-
-  ctx.beginPath();
-  for (let x = 0; x <= width; x += small) {
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, height);
+  for (const multiple of [1, 5]) {
+    ctx.strokeStyle = multiple === 1 ? "#f3caca" : "#e59a9a";
+    ctx.lineWidth = multiple === 1 ? 0.5 : 1;
+    ctx.beginPath();
+    const dx = spacing.x * multiple;
+    const dy = spacing.y * multiple;
+    for (let x = 0; x <= width; x += dx) {
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, height);
+    }
+    // Anchor voltage grid to the actual 0 mV baseline, including after resizing.
+    for (let y = baselineY % dy; y <= height; y += dy) {
+      ctx.moveTo(0, y);
+      ctx.lineTo(width, y);
+    }
+    ctx.stroke();
   }
-  for (let y = 0; y <= height; y += small) {
-    ctx.moveTo(0, y);
-    ctx.lineTo(width, y);
-  }
-  ctx.stroke();
-
-  // 大マス
-  ctx.strokeStyle = "#e59a9a";
-  ctx.lineWidth = 1;
-
-  const large = small * 5;
-
-  ctx.beginPath();
-  for (let x = 0; x <= width; x += large) {
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, height);
-  }
-  for (let y = 0; y <= height; y += large) {
-    ctx.moveTo(0, y);
-    ctx.lineTo(width, y);
-  }
-  ctx.stroke();
-
   ctx.restore();
 }
 
@@ -1495,6 +1472,10 @@ function EcgCanvas(
     audioVolume = 0.45,
     width,
     height,
+    paused = false,
+    freezeAtMs,
+    teachingFocus = null,
+    measurementPractice,
     secondsVisible = 6,
     pxPerMv = 80,
     className,
@@ -1518,6 +1499,10 @@ function EcgCanvas(
   const lastAudioScanMsRef = useRef(0);
   const lastVfAlarmMsRef = useRef(-Infinity);
   const audioSettingsRef = useRef({ muted: audioMuted, volume: audioVolume });
+  const [measurementScale, setMeasurementScale] = useState<MonitorScale | null>(null);
+  const [teachingTime, setTeachingTime] = useState<number | null>(null);
+  const teachingTimeRef = useRef<number | null>(null);
+  const measurementScaleRef = useRef<MonitorScale | null>(null);
   const [isShockFlashVisible, setIsShockFlashVisible] = useState(false);
 
   latestSignalRef.current = {
@@ -1535,12 +1520,12 @@ function EcgCanvas(
   }, [onLiveBpmChange]);
 
   useEffect(() => {
-    audioSettingsRef.current = { muted: audioMuted, volume: audioVolume };
+    audioSettingsRef.current = { muted: audioMuted || paused, volume: audioVolume };
     const masterGain = masterGainRef.current;
 
     if (masterGain) {
       const context = audioContextRef.current;
-      const nextGain = audioMuted ? 0 : audioVolume;
+      const nextGain = audioMuted || paused ? 0 : audioVolume;
       if (context) {
         masterGain.gain.setTargetAtTime(nextGain, context.currentTime, 0.015);
       } else {
@@ -1548,7 +1533,7 @@ function EcgCanvas(
       }
     }
 
-    if (audioMuted || audioVolume <= 0) {
+    if (audioMuted || paused || audioVolume <= 0) {
       const context = audioContextRef.current;
       const oscillator = flatlineOscillatorRef.current;
       const gain = flatlineGainRef.current;
@@ -1561,7 +1546,7 @@ function EcgCanvas(
       flatlineOscillatorRef.current = null;
       flatlineGainRef.current = null;
     }
-  }, [audioMuted, audioVolume]);
+  }, [audioMuted, audioVolume, paused]);
 
   useEffect(() => {
     return () => {
@@ -1729,6 +1714,7 @@ function EcgCanvas(
           previousElapsedMs,
           elapsedMs,
           activeBpm,
+          getPvcEveryNBeats(activeTemplate),
           playQrsBeep,
           playPvcBeep
         );
@@ -1787,6 +1773,7 @@ function EcgCanvas(
   useImperativeHandle(
     ref,
     () => ({
+      getElapsedMs() { return elapsedMsRef.current; },
       resumeAudio() {
         void ensureAudioContext()?.resume();
       },
@@ -1828,6 +1815,7 @@ function EcgCanvas(
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    lastFrameTimeRef.current = null;
     let renderWidth = 1;
     let renderHeight = 1;
 
@@ -1860,7 +1848,8 @@ function EcgCanvas(
         MAX_FRAME_DELTA_MS
       );
       lastFrameTimeRef.current = timestamp;
-      elapsedMsRef.current += deltaMs;
+      if (paused && freezeAtMs !== undefined && Number.isFinite(freezeAtMs)) elapsedMsRef.current = freezeAtMs;
+      else if (!paused) elapsedMsRef.current += deltaMs;
 
       const elapsedMs = elapsedMsRef.current;
       const visibleMs = secondsVisible * 1000;
@@ -1914,7 +1903,17 @@ function EcgCanvas(
       );
       lastAudioScanMsRef.current = elapsedMs;
 
-      drawGrid(ctx, renderWidth, renderHeight);
+      const scale = { width: renderWidth, height: renderHeight, visibleMs, ...waveformLayout };
+      const previousScale = measurementScaleRef.current;
+      if (!previousScale || Object.keys(scale).some((key) => scale[key as keyof MonitorScale] !== previousScale[key as keyof MonitorScale])) {
+        measurementScaleRef.current = scale;
+        setMeasurementScale(scale);
+      }
+      if (paused && (teachingFocus || measurementPractice) && teachingTimeRef.current !== elapsedMs) {
+        teachingTimeRef.current = elapsedMs;
+        setTeachingTime(elapsedMs);
+      }
+      drawGrid(ctx, scale);
 
       ctx.save();
 
@@ -1988,8 +1987,14 @@ function EcgCanvas(
     };
     // The RAF loop is restarted only when rendering inputs change; audio state flows through refs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bpm, displayLabel, rhythm, width, height, secondsVisible, pxPerMv, template]);
+  }, [bpm, displayLabel, rhythm, width, height, secondsVisible, pxPerMv, template, paused, teachingFocus, freezeAtMs, measurementPractice]);
 
+  const practiceMarks = measurementPractice && teachingTime !== null && measurementScale
+    ? buildTeachingMarks(template, DEFAULT_TEMPLATE, bpm, teachingTime - measurementScale.visibleMs, teachingTime, measurementPractice.kind)
+      .filter(mark => mark.startMs >= teachingTime - measurementScale.visibleMs && mark.endMs <= teachingTime)
+      .map(mark => ({...mark, startMs: mark.startMs - teachingTime + measurementScale.visibleMs, endMs: mark.endMs - teachingTime + measurementScale.visibleMs}))
+    : [];
+  const practiceTask = MEASUREMENT_TASKS.find(task => task.kind === measurementPractice?.kind);
   return (
     <div ref={containerRef} className={cn("relative h-full w-full", className)}>
       <canvas
@@ -1997,6 +2002,16 @@ function EcgCanvas(
         aria-label="ECG waveform canvas"
         className="block h-full w-full"
       />
+      {paused && teachingFocus && measurementScale && teachingTime !== null ? (
+        <WaveformTeachingOverlay focus={teachingFocus} template={template} bpm={bpm}
+          scale={measurementScale} elapsedMs={teachingTime} />
+      ) : null}
+      {paused && measurementPractice?.hint && practiceTask && measurementScale && teachingTime !== null ? (
+        <WaveformTeachingOverlay focus={{kind: practiceTask.kind, label: practiceTask.label, hint: practiceTask.instruction}}
+          template={template} bpm={bpm} scale={measurementScale} elapsedMs={teachingTime} bottomInset={80} />
+      ) : null}
+      {paused && !teachingFocus && measurementScale ? <WaveformCalipers key={measurementPractice?.kind ?? "manual"} scale={measurementScale}
+        practiceMarks={measurementPractice ? practiceMarks : undefined} practiceLabel={practiceTask?.label} /> : null}
       <div
         aria-hidden
         className={cn(

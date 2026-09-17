@@ -1,0 +1,156 @@
+[
+  {
+    "ecg_id": "10",
+    "scp_codes": "{'NORM': 100.0, 'SR': 0.0}",
+    "filename_hr": "records500/00000/00010_hr",
+    "validated_by_human": "True",
+    "strat_fold": "9",
+    "static_noise": "",
+    "burst_noise": "",
+    "baseline_drift": "",
+    "electrodes_problems": ""
+  },
+  {
+    "ecg_id": "3155",
+    "scp_codes": "{'CRBBB': 100.0, 'SR': 0.0}",
+    "filename_hr": "records500/03000/03155_hr",
+    "validated_by_human": "True",
+    "strat_fold": "9",
+    "static_noise": "",
+    "burst_noise": "",
+    "baseline_drift": "",
+    "electrodes_problems": ""
+  },
+  {
+    "ecg_id": "57",
+    "scp_codes": "{'NORM': 100.0, 'SR': 0.0}",
+    "filename_hr": "records500/00000/00057_hr",
+    "validated_by_human": "True",
+    "strat_fold": "10",
+    "static_noise": "",
+    "burst_noise": "",
+    "baseline_drift": "",
+    "electrodes_problems": ""
+  },
+  {
+    "ecg_id": "618",
+    "scp_codes": "{'CLBBB': 100.0, 'SR': 0.0}",
+    "filename_hr": "records500/00000/00618_hr",
+    "validated_by_human": "True",
+    "strat_fold": "10",
+    "static_noise": "",
+    "burst_noise": "",
+    "baseline_drift": "",
+    "electrodes_problems": ""
+  },
+  {
+    "ecg_id": "4117",
+    "scp_codes": "{'AFIB': 100.0}",
+    "filename_hr": "records500/04000/04117_hr",
+    "validated_by_human": "True",
+    "strat_fold": "9",
+    "static_noise": "",
+    "burst_noise": "",
+    "baseline_drift": "",
+    "electrodes_problems": ""
+  },
+  {
+    "ecg_id": "2146",
+    "scp_codes": "{'1AVB': 100.0, 'SR': 0.0}",
+    "filename_hr": "records500/02000/02146_hr",
+    "validated_by_human": "True",
+    "strat_fold": "10",
+    "static_noise": "",
+    "burst_noise": "",
+    "baseline_drift": " , stark",
+    "electrodes_problems": ""
+  },
+  {
+    "ecg_id": "23",
+    "scp_codes": "{'AFLT': 100.0}",
+    "filename_hr": "records500/00000/00023_hr",
+    "validated_by_human": "True",
+    "strat_fold": "9",
+    "static_noise": "",
+    "burst_noise": "",
+    "baseline_drift": "",
+    "electrodes_problems": ""
+  },
+  {
+    "ecg_id": "219",
+    "scp_codes": "{'NORM': 50.0, 'PVC': 100.0, 'SR': 0.0}",
+    "filename_hr": "records500/00000/00219_hr",
+    "validated_by_human": "True",
+    "strat_fold": "9",
+    "static_noise": "",
+    "burst_noise": "",
+    "baseline_drift": "",
+    "electrodes_problems": ""
+  },
+  {
+    "ecg_id": "52",
+    "scp_codes": "{'IRBBB': 100.0, 'SR': 0.0}",
+    "filename_hr": "records500/00000/00052_hr",
+    "validated_by_human": "True",
+    "strat_fold": "1",
+    "static_noise": "",
+    "burst_noise": "",
+    "baseline_drift": "",
+    "electrodes_problems": ""
+  },
+  {
+    "ecg_id": "14009",
+    "scp_codes": "{'2AVB': 100.0}",
+    "filename_hr": "records500/14000/14009_hr",
+    "validated_by_human": "True",
+    "strat_fold": "1",
+    "static_noise": "",
+    "burst_noise": "",
+    "baseline_drift": "",
+    "electrodes_problems": ""
+  },
+  {
+    "ecg_id": "526",
+    "scp_codes": "{'ASMI': 100.0, 'SR': 0.0}",
+    "filename_hr": "records500/00000/00526_hr",
+    "validated_by_human": "True",
+    "strat_fold": "10",
+    "static_noise": " , I-AVF,  ",
+    "burst_noise": "",
+    "baseline_drift": "",
+    "electrodes_problems": ""
+  },
+  {
+    "ecg_id": "1577",
+    "scp_codes": "{'IMI': 100.0, 'SR': 0.0}",
+    "filename_hr": "records500/01000/01577_hr",
+    "validated_by_human": "True",
+    "strat_fold": "9",
+    "static_noise": "",
+    "burst_noise": "",
+    "baseline_drift": "",
+    "electrodes_problems": ""
+  },
+  {
+    "ecg_id": "10873",
+    "scp_codes": "{'LMI': 100.0, 'SR': 0.0}",
+    "filename_hr": "records500/10000/10873_hr",
+    "validated_by_human": "True",
+    "strat_fold": "9",
+    "static_noise": "",
+    "burst_noise": "",
+    "baseline_drift": "",
+    "electrodes_problems": ""
+  },
+  {
+    "ecg_id": "7244",
+    "scp_codes": "{'PMI': 100.0, 'AFIB': 0.0}",
+    "filename_hr": "records500/07000/07244_hr",
+    "validated_by_human": "True",
+    "strat_fold": "9",
+    "static_noise": "",
+    "burst_noise": "",
+    "baseline_drift": "",
+    "electrodes_problems": ""
+  }
+]

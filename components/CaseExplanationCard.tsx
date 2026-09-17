@@ -3,20 +3,28 @@
 import {
   BookOpen,
   Heart,
+  GitCompareArrows,
   Lightbulb,
-  ListChecks,
   ShieldCheck,
   TriangleAlert,
   Zap,
 } from "lucide-react";
 import type { ComponentType } from "react";
 
-import type { ECGCase } from "@/data/ecgCases";
+import { findCaseById, type ECGCase } from "@/data/ecgCases";
+import { findComparisonPairsForCase } from "@/data/comparisonPairs";
+import { Button } from "@/components/ui/button";
+import { getCaseReferences } from "@/data/ecgReferences";
 import { cn } from "@/lib/utils";
+import { ECG_TERMS } from "@/data/ecgTerms";
+import { TermHelp } from "@/components/TermHelp";
 import { ObservationGuideCard } from "@/components/ObservationGuideCard";
 
 interface CaseExplanationCardProps {
   selectedCase: ECGCase | null;
+  selectedStep?: number | null;
+  onStepSelect?: (step: number) => void;
+  onCompare?: (pairId: string) => void;
 }
 
 const severityConfig = {
@@ -67,15 +75,11 @@ function EducationSection({
   title,
   icon: Icon,
   items,
-  maxItems,
 }: {
   title: string;
   icon: ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
   items: string[];
-  maxItems?: number;
 }) {
-  const visibleItems = maxItems ? items.slice(0, maxItems) : items;
-
   return (
     <section className="space-y-2">
       <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-foreground/80">
@@ -83,7 +87,7 @@ function EducationSection({
         {title}
       </div>
       <ul className="space-y-1.5 text-sm leading-relaxed text-muted-foreground">
-        {visibleItems.map((item) => (
+        {items.map((item) => (
           <li key={item} className="flex gap-2">
             <span className="mt-2 size-1 shrink-0 rounded-full bg-current opacity-60" />
             <span>{item}</span>
@@ -96,6 +100,9 @@ function EducationSection({
 
 export function CaseExplanationCard({
   selectedCase,
+  selectedStep,
+  onStepSelect,
+  onCompare,
 }: CaseExplanationCardProps) {
   if (!selectedCase) {
     return <EmptyState />;
@@ -159,47 +166,83 @@ export function CaseExplanationCard({
           <section className="space-y-2">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-foreground/80">
               <BookOpen className="size-3.5 text-muted-foreground" aria-hidden />
-              Overview
+              ひとことでいうと
             </div>
-            <p className="text-sm leading-6 text-muted-foreground md:leading-relaxed">
+            <p className="text-sm leading-7 text-foreground/85">
               {selectedCase.description}
             </p>
+            <TermHelp key={selectedCase.id} text={selectedCase.description} caseId={selectedCase.id} onStepSelect={onStepSelect} />
           </section>
 
-          <ObservationGuideCard ecgCase={selectedCase} />
+          <ObservationGuideCard ecgCase={selectedCase} selectedStep={selectedStep} onStepSelect={onStepSelect} />
 
-          <div className="grid gap-4 lg:grid-cols-2 lg:gap-5">
-            <EducationSection
-              title="Key findings"
-              icon={ListChecks}
-              items={selectedCase.learningPoints}
-              maxItems={4}
-            />
-            <EducationSection
-              title="Recognition tips"
-              icon={Lightbulb}
-              items={selectedCase.recognitionTips}
-              maxItems={4}
-            />
-            <EducationSection
-              title="Common pitfalls"
-              icon={TriangleAlert}
-              items={selectedCase.commonPitfalls}
-              maxItems={3}
-            />
-            <section className="space-y-2">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-foreground/80">
-                <ShieldCheck
-                  className="size-3.5 text-muted-foreground"
-                  aria-hidden
-                />
-                Clinical note
-              </div>
-              <p className="text-xs leading-relaxed text-muted-foreground md:text-sm">
-                {selectedCase.clinicalNote}
-              </p>
-            </section>
-          </div>
+          <EducationSection
+            title="似た波形との違い"
+            icon={Lightbulb}
+            items={selectedCase.recognitionTips}
+          />
+
+          {onCompare ? <div className="flex flex-wrap gap-2" role="group" aria-label="この症例と比較する">
+            {findComparisonPairsForCase(selectedCase.id).map((pair) => {
+              const otherId = pair.leftCaseId === selectedCase.id ? pair.rightCaseId : pair.leftCaseId;
+              const otherCase = findCaseById(otherId);
+              return otherCase ? <Button key={pair.id} type="button" variant="outline"
+                className="h-auto min-h-10 max-w-full justify-start whitespace-normal py-2 text-left"
+                onClick={() => onCompare(pair.id)}>
+                <GitCompareArrows className="size-4 shrink-0" aria-hidden />
+                {otherCase.label}と比べる
+              </Button> : null;
+            })}
+          </div> : null}
+
+          <details className="rounded-xl border border-border bg-background/50 px-3 py-2.5 md:px-4">
+            <summary className="cursor-pointer rounded text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-sky-500">
+              用語の意味を確認する
+            </summary>
+            <dl className="mt-3 grid gap-x-6 gap-y-3 text-sm leading-6 sm:grid-cols-2">
+              {ECG_TERMS.map(({ label: term, meaning }) => (
+                <div key={term}>
+                  <dt className="font-medium text-foreground">{term}</dt>
+                  <dd className="mt-0.5 text-muted-foreground">{meaning}</dd>
+                </div>
+              ))}
+            </dl>
+          </details>
+
+          <details key={selectedCase.id} className="rounded-xl border border-border bg-background/50 px-3 py-2.5 md:px-4">
+            <summary className="cursor-pointer rounded text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-sky-500">
+              間違えやすい点・実際の患者さんでは
+            </summary>
+            <div className="mt-4 space-y-4">
+              <EducationSection
+                title="間違えやすい点"
+                icon={TriangleAlert}
+                items={selectedCase.commonPitfalls}
+              />
+              <section className="space-y-2">
+                <h4 className="flex items-center gap-2 text-xs font-semibold text-foreground/80">
+                  <ShieldCheck className="size-3.5 text-muted-foreground" aria-hidden />
+                  実際の患者さんでは
+                </h4>
+                <p className="text-sm leading-7 text-muted-foreground">{selectedCase.clinicalNote}</p>
+              </section>
+              <section className="space-y-2 border-t border-border pt-3">
+                <h4 className="text-xs font-semibold text-foreground/80">解説の参考資料</h4>
+                <ul className="space-y-2 text-xs leading-5">
+                  {getCaseReferences(selectedCase.id).map((reference) => (
+                    <li key={reference.url}>
+                      <a href={reference.url} target="_blank" rel="noreferrer" className="text-sky-700 underline underline-offset-4 dark:text-sky-300">
+                        {reference.title}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            </div>
+          </details>
+          <p className="text-xs leading-5 text-muted-foreground">
+            この解説は成人の典型的な波形を学ぶためのものです。実際の診断・治療判断の代替ではありません。
+          </p>
         </div>
       </div>
     </div>

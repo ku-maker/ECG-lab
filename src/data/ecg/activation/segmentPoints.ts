@@ -1,10 +1,10 @@
 // 刺激伝導路の3D点列と、賦活セグメント（ConductionSegmentId）への割当。
 //
-// 形状は既存 VectorVisualizer の CONDUCTION_POINTS/CONDUCTION_PATHS をそのまま移設。
+// 4腔の模式モデルに合わせた伝導路。心尖側は患者左（+X）へ向ける。
 // フレーム整合（T2：+X=患者左, +Y=上, +Z=前）は既に満たしている：
 //   - SA 結節・右脚（RBB）は x<0（=−X=患者右）… 解剖どおり右房・右脚は患者右。
 //   - 左脚系（LBB/LAF/LPF）は x>0（=+X=患者左）… 左脚は患者左。
-// よって符号補正は不要（形状は変えない）。
+// 個々の点は教育用近似であり、解剖学的な計測座標ではない。
 //
 // 型のみ import（ランタイム import ゼロ）＝node の型ストリップで扱える。
 
@@ -24,8 +24,8 @@ export const CONDUCTION_POINTS = {
   lafEnd: [0.62, -1.04, 0.14],
   lpfMid: [0.12, -0.94, -0.2],
   lpfEnd: [0.26, -1.24, -0.22],
-  septalApex: [-0.34, -1.22, 0.04],
-  purkinjeApex: [-0.76, -1.54, 0.16],
+  septalApex: [0.08, -1.22, 0.14],
+  purkinjeApex: [0.36, -1.70, 0.16],
 } satisfies Record<string, VectorPoint>;
 
 /**
@@ -38,6 +38,10 @@ export const CONDUCTION_POINTS = {
 export const SEGMENT_POINTS: Record<ConductionSegmentId, VectorPoint[]> = {
   saAtrial: [CONDUCTION_POINTS.sa, CONDUCTION_POINTS.internodal, CONDUCTION_POINTS.av],
   avDelay: [CONDUCTION_POINTS.av, CONDUCTION_POINTS.his],
+  // WPWの位置別経路は wpw.ts のバリアント定義を使う。ここは型を満たす既定値。
+  accessoryAtrialApproach: [[0.2, 0.7, -0.2], [0.67, 0.28, -0.12]],
+  accessoryPathway: [[0.67, 0.28, -0.12], [0.8, -0.05, 0.08]],
+  accessoryVentricularSpread: [[0.8, -0.05, 0.08], [0.55, -0.82, 0.2]],
   hisBundle: [CONDUCTION_POINTS.his, CONDUCTION_POINTS.lbbTrunk],
   rightBundle: [
     CONDUCTION_POINTS.his,

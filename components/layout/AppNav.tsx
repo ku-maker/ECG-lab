@@ -20,13 +20,13 @@ const navItems = [
   },
   {
     id: "learn",
-    label: "学習ガイド",
+    label: "目的から学ぶ",
     icon: BookOpen,
     active: false,
   },
 ] as const;
 
-export function AppNav() {
+export function AppNav({ onOpenLibrary, onOpenGuide }: { onOpenLibrary: () => void; onOpenGuide: () => void }) {
   return (
     <nav
       aria-label="メインナビゲーション"
@@ -45,7 +45,8 @@ export function AppNav() {
               item.active && "pointer-events-none"
             )}
             aria-current={item.active ? "page" : undefined}
-            disabled={!item.active}
+            aria-haspopup={!item.active ? "dialog" : undefined}
+            onClick={item.id === "cases" ? onOpenLibrary : item.id === "learn" ? onOpenGuide : undefined}
           >
             <Icon className="size-4" aria-hidden />
             {item.label}

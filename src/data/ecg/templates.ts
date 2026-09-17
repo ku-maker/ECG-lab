@@ -1,9 +1,17 @@
 import nsrTemplateJson from "@/src/data/ecg/templates/nsr-lead2.json";
 import sinusBradyTemplateJson from "@/src/data/ecg/templates/sinus-brady-lead2.json";
 import sinusTachyTemplateJson from "@/src/data/ecg/templates/sinus-tachy-lead2.json";
+import sinusArrhythmiaTemplateJson from "@/src/data/ecg/templates/sinus-arrhythmia-lead2.json";
+import atrialTachyTemplateJson from "@/src/data/ecg/templates/atrial-tachy-lead2.json";
 import vtTemplateJson from "@/src/data/ecg/templates/vt-lead2.json";
 import pvcTemplateJson from "@/src/data/ecg/templates/pvc-lead2.json";
+import pvcBigeminyTemplateJson from "@/src/data/ecg/templates/pvc-bigeminy-lead2.json";
+import aivrTemplateJson from "@/src/data/ecg/templates/aivr-lead2.json";
+import ventricularEscapeTemplateJson from "@/src/data/ecg/templates/ventricular-escape-lead2.json";
+import ventricularPacedTemplateJson from "@/src/data/ecg/templates/ventricular-paced-lead2.json";
 import pacTemplateJson from "@/src/data/ecg/templates/pac-lead2.json";
+import pacBigeminyTemplateJson from "@/src/data/ecg/templates/pac-bigeminy-lead2.json";
+import matTemplateJson from "@/src/data/ecg/templates/mat-lead2.json";
 import avBlock1TemplateJson from "@/src/data/ecg/templates/avblock1-lead2.json";
 import mobitz2TemplateJson from "@/src/data/ecg/templates/mobitz2-lead2.json";
 import wenckebachTemplateJson from "@/src/data/ecg/templates/wenckebach-lead2.json";
@@ -45,9 +53,17 @@ export type EcgTemplateId =
   | "nsr"
   | "sinusBrady"
   | "sinusTachy"
+  | "sinusArrhythmia"
+  | "atrialTachy"
   | "vt"
   | "pvc"
+  | "pvcBigeminy"
+  | "aivr"
+  | "ventricularEscape"
+  | "ventricularPaced"
   | "pac"
+  | "pacBigeminy"
+  | "mat"
   | "avblock1"
   | "mobitz2"
   | "wenckebach"
@@ -63,9 +79,17 @@ export type EcgTemplateJsonId =
   | "nsr-lead2-v0"
   | "sinus-brady-lead2-v0"
   | "sinus-tachy-lead2-v0"
+  | "sinus-arrhythmia-lead2-v0"
+  | "atrial-tachy-lead2-v0"
   | "vt-lead2-v0"
   | "pvc-lead2-v0"
+  | "pvc-bigeminy-lead2-v0"
+  | "aivr-lead2-v0"
+  | "ventricular-escape-lead2-v0"
+  | "ventricular-paced-lead2-v0"
   | "pac-lead2-v0"
+  | "pac-bigeminy-lead2-v0"
+  | "mat-lead2-v0"
   | "avblock1-lead2-v0"
   | "mobitz2-lead2-v0"
   | "wenckebach-lead2-v0"
@@ -120,6 +144,12 @@ export const ECG_TEMPLATE_OPTIONS: EcgTemplateOption[] = [
     template: sinusTachyTemplateJson as BeatTemplate,
   },
   {
+    id: "sinusArrhythmia", label: "洞性不整脈", abbr: "Sinus arrhythmia", severity: "normal",
+    description: "P-QRS-Tを保ちながら、RR間隔が周期的に変動するリズムです。", defaultBpm: 70,
+    template: sinusArrhythmiaTemplateJson as BeatTemplate,
+  },
+  { id: "atrialTachy", label: "心房頻拍", abbr: "AT", severity: "warning", description: "洞性P波と異なるP波を伴う規則的な狭QRS頻拍です。", defaultBpm: 140, template: atrialTachyTemplateJson as BeatTemplate },
+  {
     id: "af",
     label: "心房細動",
     abbr: "AF",
@@ -140,6 +170,14 @@ export const ECG_TEMPLATE_OPTIONS: EcgTemplateOption[] = [
     template: pvcTemplateJson as BeatTemplate,
   },
   {
+    id: "pvcBigeminy", label: "心室性二段脈", abbr: "Bigeminy", severity: "warning",
+    description: "洞性拍と心室性期外収縮が交互に現れるリズムです。", defaultBpm: 70,
+    template: pvcBigeminyTemplateJson as BeatTemplate,
+  },
+  { id: "aivr", label: "促進性心室固有調律", abbr: "AIVR", severity: "warning", description: "比較的遅い速度で幅広い心室波形が続くリズムです。", defaultBpm: 80, template: aivrTemplateJson as BeatTemplate },
+  { id: "ventricularEscape", label: "心室補充調律", abbr: "Escape", severity: "critical", description: "遅い速度で幅広い心室性補充拍が続くリズムです。", defaultBpm: 35, template: ventricularEscapeTemplateJson as BeatTemplate },
+  { id: "ventricularPaced", label: "心室ペーシング調律", abbr: "V-paced", severity: "warning", description: "刺激スパイクの直後に幅広いQRS波が続く教育用波形です。", defaultBpm: 70, template: ventricularPacedTemplateJson as BeatTemplate },
+  {
     id: "pac",
     label: "心房性期外収縮",
     abbr: "PAC",
@@ -149,6 +187,8 @@ export const ECG_TEMPLATE_OPTIONS: EcgTemplateOption[] = [
     defaultBpm: 75,
     template: pacTemplateJson as BeatTemplate,
   },
+  { id: "pacBigeminy", label: "心房性二段脈", abbr: "Atrial bigeminy", severity: "warning", description: "洞性拍と心房性期外収縮が交互に現れるリズムです。", defaultBpm: 75, template: pacBigeminyTemplateJson as BeatTemplate },
+  { id: "mat", label: "多源性心房頻拍", abbr: "MAT", severity: "warning", description: "3種類以上のP波を伴う不規則な狭QRS頻拍です。", defaultBpm: 115, template: matTemplateJson as BeatTemplate },
   {
     id: "avblock1",
     label: "1度房室ブロック",

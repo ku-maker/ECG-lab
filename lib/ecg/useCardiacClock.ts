@@ -1,5 +1,6 @@
 "use client";
 
+import { playbackDelta } from "./conductionStages";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
@@ -36,6 +37,7 @@ type UseCardiacClockOptions = {
   cycleMs: number;
   /** 初期状態で再生を開始するか（既定 true）。 */
   autoPlay?: boolean;
+  playbackRate?: number;
 };
 
 type UseCardiacClockResult = {
@@ -52,6 +54,7 @@ export function useCardiacClock({
   bpm,
   cycleMs,
   autoPlay = true,
+  playbackRate = 1,
 }: UseCardiacClockOptions): UseCardiacClockResult {
   const initialMode: ClockMode = autoPlay ? "playing" : "scrubbing";
   // 可変の真実（RAF ループが読み書きする）。
@@ -85,14 +88,14 @@ export function useCardiacClock({
       if (lastTs === null) lastTs = ts;
       const delta = ts - lastTs;
       lastTs = ts;
-      stateRef.current = advance(stateRef.current, delta);
+      stateRef.current = advance(stateRef.current, playbackDelta(delta, playbackRate));
       setPhaseMs(phaseOf(stateRef.current));
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
 
     return () => cancelAnimationFrame(raf);
-  }, [mode]);
+  }, [mode, playbackRate]);
 
   const play = useCallback(() => {
     stateRef.current = enterPlaying(stateRef.current);

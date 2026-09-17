@@ -4,9 +4,14 @@
 //
 // 外部 import ゼロ（T2 同様、Node の型ストリップで検証可能に保つため）。
 
+import type { LeadId } from "../leads/leadAxes";
+
 export type ConductionSegmentId =
   | "saAtrial"
   | "avDelay"
+  | "accessoryAtrialApproach"
+  | "accessoryPathway"
+  | "accessoryVentricularSpread"
   | "hisBundle"
   | "rightBundle"
   | "leftAnterior"
@@ -29,6 +34,8 @@ export type ActivationEvent = {
   dipolePeakMag: number;
   /** 波形寄与の有無（avDelay は false＝電気的に静かな PR 区間） */
   contributesToWave: boolean;
+  /** 局在教材などで初期成分の誘導別極性を指定する場合の投影係数。未指定誘導は双極子投影を使う。 */
+  leadProjection?: Partial<Record<LeadId, number>>;
 };
 
 export type ActivationTimeline = {
